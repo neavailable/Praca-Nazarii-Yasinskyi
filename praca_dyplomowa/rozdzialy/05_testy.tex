@@ -1,0 +1,167 @@
+% ============================================================================
+%  Rozdział 5. Testy i walidacja
+% ============================================================================
+\chapter{Testy i walidacja}
+\label{rozdz:testy}
+
+Testy miały na celu sprawdzenie, czy gra spełnia wymagania określone w~rozdziale trzecim,
+czy przepływ pomiędzy scenami i~łańcuchy zdarzeń działają poprawnie oraz czy rozgrywka
+jest czytelna dla gracza. Zastosowano cztery uzupełniające się metody: testy funkcjonalne
+w~trybie odtwarzania edytora Unity, automatyczny scenariusz uruchomieniowy w~trybie
+wsadowym edytora, walidację konfiguracji w~procesie budowania oraz sesje testowe rozgrywki,
+po których wprowadzano poprawki w~mechanikach.
+
+\section{Środowisko i metoda testów}
+
+Testy funkcjonalne i~sesje testowe rozgrywki przeprowadzono w~edytorze Unity 2022.3.60f1
+na dwóch komputerach: stacjonarnym z~procesorem AMD Ryzen~5 9600X, 32~GB pamięci
+operacyjnej i~kartą graficzną AMD Radeon RX~9070~XT (podrozdział~3.4.1) oraz na laptopie
+HP, z~użyciem myszy jako urządzenia wejściowego. Uruchomienie gry na dwóch maszynach
+o~wyraźnie różnej wydajności pozwoliło sprawdzić, że rozgrywka nie zależy od liczby klatek
+obrazu, ponieważ ruch kuli i~przeszkód jest obliczany w~stałym kroku fizyki. Akcja
+wejściowa ma wspólną definicję dla myszy i~ekranu dotykowego, więc różnice pomiędzy
+platformami ograniczają się do odczytu pozycji wskaźnika (podrozdział~\ref{sec:sterowanie}).
+W~trakcie sesji testowych oceniano przede wszystkim wygodę sterowania, czytelność interfejsu
+i~poziom trudności, a~ich wyniki opisano w~podrozdziale~\ref{sec:poprawki}.
+
+\section{Testy funkcjonalne}
+
+Scenariusze testowe przygotowano na podstawie wymagań funkcjonalnych. Każdy scenariusz
+opisuje czynność gracza lub zdarzenie rozgrywki oraz oczekiwaną reakcję gry. Wyniki
+zestawiono w~tabeli~\ref{tab:testy}. Scenariusze oznaczone literą A~zostały dodatkowo
+wykonane automatycznie w~scenariuszu wsadowym opisanym w~kolejnym podrozdziale.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Wyniki testów funkcjonalnych; \zrodloWlasne}
+  \label{tab:testy}
+  \begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{5.0cm} X c}
+    \toprule
+    \textbf{Nr} & \textbf{Scenariusz} & \textbf{Oczekiwany rezultat} & \textbf{Wynik} \\
+    \midrule
+    1 & Uruchomienie gry (A) & menu z~przyciskami trzech poziomów, statystyk i~wyjścia & zgodny \\
+    2 & Otwarcie okna statystyk (A) & tabela trzech poziomów z~aktualnymi wartościami & zgodny \\
+    3 & Wybór poziomu w~menu (A) & ekran ładowania, a~następnie wybrany poziom & zgodny \\
+    4 & Rozpoczęcie poziomu (A) & kula w~punkcie startowym, licznik czasu odlicza, zdrowie 100 & zgodny \\
+    5 & Gest rozpoczęty poza kulą & brak strzału i~linii celowniczej & zgodny \\
+    6 & Gest rozpoczęty na kuli & linia celownicza, po zwolnieniu ruch w~kierunku przeciwnym & zgodny \\
+    7 & Uderzenie kuli w~ścianę & odbicie, animacja zgniecenia, efekt pyłu & zgodny \\
+    8 & Zebranie monety & animacja znikania, wzrost licznika o~20 & zgodny \\
+    9 & Zebranie ostatniej monety & pojawienie się mety & zgodny \\
+    10 & Dotarcie do mety (A) & zatrzymanie czasu, okno z~czasem i~informacją o~rekordzie & zgodny \\
+    11 & Kolizja z~przeciwnikiem & odbicie z~utratą 80\% mocy, obrażenia zależne od typu przeciwnika & zgodny \\
+    12 & Zadanie kuli 29 punktów obrażeń (A) & aktualizacja paska i~liczby punktów życia & zgodny \\
+    13 & Wjazd w~apteczkę przy pełnym zdrowiu & apteczka pozostaje na planszy & zgodny \\
+    14 & Utrata zdrowia (A) & kula znika, okno końca bez panelu czasu & zgodny \\
+    15 & Wjazd na pole przyspieszające & wyrzucenie kuli wzdłuż strzałek & zgodny \\
+    16 & Naciśnięcie \emph{Push} przy stojącej kuli & ruch w~losowym kierunku; przy toczącej się kuli przycisk nieaktywny & zgodny \\
+    17 & Ponowna gra i~powrót do menu & wczytanie poziomu od początku lub menu, zapis czasu gry & zgodny \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Szczególną uwagę poświęcono scenariuszom, w~których jedno zdarzenie uruchamia kilka
+reakcji w~różnych modułach. Przy wjeździe na metę licznik czasu zapisuje wynik przed
+dezaktywacją kuli, więc okno końca poziomu zawsze pokazuje czas przejścia
+(rysunek~\ref{rys:wyniki}a). Przy utracie zdrowia wynik nie jest publikowany, dzięki
+czemu to samo okno wyświetla się bez panelu czasu (rysunek~\ref{rys:obrazenia}b).
+
+\section{Automatyczny scenariusz uruchomieniowy}
+
+Aby sprawdzić przepływ scen bez udziału człowieka, przygotowano skrypt edytora
+uruchamiany na kopii projektu w~trybie wsadowym (\kod{-batchmode}), z~wykorzystaniem
+procesora graficznego. Skrypt otwiera menu główne, przechodzi w~tryb odtwarzania
+i~wykonuje kolejne kroki: otwiera okno statystyk, wybiera pierwszy poziom tym samym
+komponentem, którego używa przycisk w~menu, a~po wczytaniu poziomu nadaje kuli prędkość
+operacją \kod{Launch} i~publikuje zdarzenie dotarcia do mety. Następnie wczytuje drugi
+poziom, zadaje kuli dwukrotnie 29~punktów obrażeń przez komponent \klasa{BallGetDamage},
+a~potem obrażenia przekraczające pozostały zapas zdrowia, i~na koniec wczytuje trzeci
+poziom. Po każdym kroku skrypt renderuje obraz kamery głównej wraz z~interfejsem do pliku;
+zrzuty ekranu zamieszczone w~niniejszej pracy pochodzą z~tego przebiegu. Rzuty poziomów
+z~góry wykonano dodatkową kamerą ortograficzną kadrowaną na podstawie obrysu ścian.
+Kod skryptu dołączono do materiałów pracy (załącznik~A).
+
+Wszystkie kroki scenariusza zakończyły się powodzeniem, a~w~dzienniku edytora z~fazy
+odtwarzania nie zarejestrowano żadnego wyjątku. Pojawiło się natomiast czterokrotnie,
+przy wczytywaniu menu i~każdego z~trzech poziomów, ostrzeżenie biblioteki Zenject
+o~tworzeniu obiektów przed zakończeniem pracy wszystkich instalatorów. Jest ono skutkiem
+przyjętego rozwiązania, w~którym kula jest tworzona wewnątrz metody
+\kod{InstallBindings} (listing~\ref{lst:ball-installer}). Rozwiązanie działa poprawnie,
+ponieważ wszystkie powiązania wymagane przez kulę są rejestrowane wcześniej, lecz
+uzależnia poprawność od kolejności instalatorów w~kontekście sceny. Przeniesienie
+tworzenia kuli do etapu inicjalizacji kontenera, np. do klasy implementującej interfejs
+\klasa{IInitializable}, usunęłoby tę zależność.
+
+\section{Walidacja konfiguracji i procesu budowania}
+
+Pliki konfiguracyjne są sprawdzane automatycznie przed każdym budowaniem wersji
+instalacyjnej (listing~\ref{lst:walidacja}). Walidacja obejmuje wszystkie 25 klas
+konfiguracji, a~błąd w~dowolnym pliku przerywa budowanie z~komunikatem wskazującym klasę
+i~przyczynę. W~ten sposób wykrywane są brakujące pliki, sekcje i~wartości, a~także
+niezgodność nazw pól JSON z~parametrami konstruktorów klas danych. Proces budowania
+dodatkowo weryfikuje, czy wszystkie sceny wskazane w~ustawieniach istnieją w~projekcie.
+Budowanie wersji instalacyjnej tym procesem zakończyło się powodzeniem, a~wynikowy plik APK
+ma rozmiar 174,8~MB.
+
+\section{Testy rozgrywki i wprowadzone poprawki}
+\label{sec:poprawki}
+
+Najwięcej zmian w~projekcie wynikło z~sesji testowych rozgrywki, w~których oceniano,
+czy mechaniki są zrozumiałe i~czy gra nie stawia gracza w~sytuacjach bez wyjścia.
+Zaobserwowane problemy i~wprowadzone na ich podstawie zmiany zestawiono
+w~tabeli~\ref{tab:poprawki}. Zmiany te wprowadzano w~kolejnych wersjach projektu.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Problemy zaobserwowane podczas testów rozgrywki i~wprowadzone zmiany; \zrodloWlasne}
+  \label{tab:poprawki}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{5.6cm} X}
+    \toprule
+    \textbf{Zaobserwowany problem} & \textbf{Wprowadzona zmiana} \\
+    \midrule
+    Sterowanie przechyłem urządzenia (trzy tryby do wyboru w~ustawieniach) okazało się
+    nieprecyzyjne & usunięto sterowanie przechyłem i~okno ustawień, pozostawiając wyłącznie
+    gest przeciągnięcia \\
+    Kula zatrzymana za ścianą bywała niewidoczna i~nie dało się jej dotknąć & dodano
+    przycisk \emph{Push}, aktywny tylko przy nieruchomej kuli \\
+    Wiatr działający wyłącznie na toczącą się kulę był odbierany jako nieprzewidywalny & wiatr
+    stał się stałym, łagodnym dryfem działającym również na stojącą kulę; w~interfejsie
+    pozostawiono tylko strzałkę kierunku \\
+    Kula dociśnięta wiatrem do ściany obracała się w~miejscu & obrót siatki liczony
+    z~rzeczywistego przemieszczenia, a~nie z~zadanej prędkości \\
+    Kula stojąca wewnątrz pola przyspieszającego lub apteczki nie reagowała na dotyk &
+    rzutowanie promienia z~pominięciem wyzwalaczy \\
+    Ruchome przeszkody mogły zakleszczyć kulę lub ciągnąć ją za sobą & komponent
+    \klasa{ObstacleKnocker} odpychający kulę od punktu styku \\
+    Poziomy były odbierane jako puste i~mało dynamiczne & dodano odbijacze, obracające się
+    belki i~ruchome ściany oraz zwiększono liczbę pól przyspieszających i~apteczek \\
+    Apteczka zebrana przy pełnym zdrowiu przepadała & apteczka pozostaje na planszy, jeśli
+    leczenie nie było potrzebne \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Wydajność i zarządzanie pamięcią}
+
+Najbardziej rozbudowany, trzeci poziom zawiera 89~przeciwników, 82~monety oraz
+kilkadziesiąt przeszkód i~pól specjalnych (tabela~\ref{tab:poziomy}). Wszystkie te obiekty,
+łącznie z~pulą efektów cząsteczkowych, są tworzone raz, podczas wczytywania poziomu,
+a~w~trakcie rozgrywki są jedynie aktywowane i~dezaktywowane. Ruch przeszkód i~przeciwników
+jest obliczany w~kroku fizyki, więc jego koszt nie rośnie wraz z~liczbą klatek obrazu.
+
+Drugim źródłem obciążenia w~grach na platformie .NET jest odśmiecanie pamięci. W~kodzie
+rozgrywki ograniczono alokacje wykonywane co klatkę: animacje korzystają z~UniTask, którego
+typ zadania jest strukturą, subskrypcje strumieni są zakładane jednorazowo przy tworzeniu
+obiektów, a~właściwości reaktywne powiadamiają obserwatorów tylko przy rzeczywistej zmianie
+wartości. Alokacje występują natomiast przy aktualizacji tekstów interfejsu: licznik czasu
+tworzy nowy łańcuch znaków w~każdej klatce, a~pozostałe napisy przy zmianie wyświetlanych
+danych. Są to krótkie łańcuchy, ale w~przypadku licznika czasu można je wyeliminować,
+korzystając z~metody \kod{SetText} komponentu TextMeshPro, która przyjmuje wartości liczbowe
+bez tworzenia pośrednich napisów. Subskrypcje są zwalniane razem z~obiektami, które je
+utworzyły; pośrednio potwierdza to scenariusz automatyczny, w~którym kolejne wczytania scen
+nie powodowały wyjątków wynikających z~odwołań do zniszczonych obiektów.
+
+Grę projektowano z~myślą o~płynnym działaniu na telefonach średniej klasy, jednak
+w~ramach pracy nie wykonano systematycznych pomiarów liczby klatek na sekundę na różnych
+urządzeniach. Pomiary takie, wykonane narzędziem Unity Profiler na kilku telefonach,
+stanowią naturalny element dalszych prac.

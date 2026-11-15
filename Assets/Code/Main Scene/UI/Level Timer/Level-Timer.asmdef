@@ -1,0 +1,21 @@
+{
+    "name": "Level-Timer",
+    "rootNamespace": "",
+    "references": [
+        "GUID:bfaf74b51d0c9664b8eb2724c0b5e14a",
+        "GUID:9ab56ac52c41f284dbe4aff1ad98b772",
+        "GUID:0c9bdbd2709fb0b44b9f217e7787f898",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:ec75a737a3289e140825d8c8cd49ebde",
+        "GUID:18fba59aeae050e4c8aa6991ae6ef8a5"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,251 @@
+% ============================================================================
+%  Rozdział 1. Wstęp
+% ============================================================================
+\chapter{Wstęp}
+
+Gry zręcznościowe należą do najstarszych gatunków gier komputerowych, a~mimo to wciąż
+stanowią dużą część rynku, zwłaszcza na urządzeniach mobilnych. O~ich odbiorze decyduje
+przede wszystkim to, czy sterowanie jest natychmiastowe i~przewidywalne, czy reguły można
+zrozumieć bez instrukcji oraz czy pojedyncza rozgrywka trwa na tyle krótko, aby gracz chciał
+ją powtórzyć. Spełnienie tych warunków wymaga dopracowania mechaniki ruchu, reakcji na
+kolizje i~informacji zwrotnej w~interfejsie, czyli elementów, które w~kodzie gry są ze sobą
+silnie powiązane.
+
+Wraz ze wzrostem liczby obiektów i~zdarzeń na planszy rośnie liczba zależności pomiędzy
+fragmentami kodu. Jeśli każdy skrypt sam wyszukuje potrzebne mu obiekty i~bezpośrednio
+wywołuje metody innych komponentów, już przy kilkudziesięciu klasach zmiana jednej
+mechaniki zaczyna wymagać poprawek w~wielu miejscach. Niniejsza praca opisuje projekt
+i~implementację gry \emph{Ball Finisher}, w~której od początku przyjęto inne podejście:
+zależności są dostarczane przez kontener wstrzykiwania zależności, zdarzenia rozgrywki są
+modelowane jako strumienie reaktywne, a~logika gry jest oddzielona od komponentów silnika
+Unity.
+
+\section{Uzasadnienie podjęcia tematu pracy}
+
+Silnik Unity jest jednym z~najpowszechniej stosowanych narzędzi do tworzenia gier
+niezależnych i~mobilnych. Jego model komponentowy pozwala szybko zbudować działający
+prototyp, jednak nie narzuca żadnej architektury kodu. Typowy projekt rozwijany bez
+przyjętych wcześniej zasad kończy się dużą liczbą klas dziedziczących po
+\klasa{MonoBehaviour}, które odwołują się do siebie przez \kod{FindObjectOfType}, pola
+publiczne ustawiane w~inspektorze lub statyczne singletony. Taki kod trudno testować,
+a~kolejność inicjalizacji obiektów zależy od kolejności wywołań metod cyklu życia, którą
+łatwo przeoczyć \cite{unity-order}.
+
+Wybór gry zręcznościowej jako przedmiotu pracy wynikał z~tego, że gatunek ten dobrze
+eksponuje wspomniane problemy. Pojedyncza kolizja kuli z~monetą powinna jednocześnie
+uruchomić animację znikania monety, zwiększyć licznik w~interfejsie, zaktualizować statystyki
+poziomu oraz, jeśli była to ostatnia moneta, odblokować metę. Zdarzeń tego rodzaju jest
+w~grze kilkadziesiąt i~zachodzą one w~różnych momentach klatki. Podejście reaktywne,
+w~którym zdarzenie publikowane jest w~jednym miejscu, a~zainteresowane moduły
+subskrybują je niezależnie od siebie, pozwala opisać takie zależności w~sposób jawny.
+
+Dodatkowym powodem było zainteresowanie autora praktykami stosowanymi w~studiach
+tworzących gry mobilne, w~których wstrzykiwanie zależności (Zenject), biblioteki reaktywne
+(UniRx, a~obecnie R3) i~asynchroniczność oparta na \kod{async}/\kod{await} (UniTask) są
+standardowym wyposażeniem projektu. Praca była okazją do sprawdzenia, jak te narzędzia
+sprawdzają się w~kompletnej, choć niewielkiej grze, oraz jakie koszty projektowe
+wprowadzają.
+
+\section{Cel pracy}
+
+Celem pracy było zaprojektowanie i~zaimplementowanie trójwymiarowej gry zręcznościowej
+w~silniku Unity, w~której gracz steruje kulą poruszającą się po planszy ograniczonej
+ścianami. Zadaniem gracza jest zebranie wszystkich monet znajdujących się na poziomie,
+po czym pojawia się meta umożliwiająca ukończenie poziomu. Na trasie rozmieszczono
+przeciwników i~przeszkody; zderzenie z~przeciwnikiem odbiera punkty życia, a~ich utrata
+kończy rozgrywkę. Cel główny podzielono na następujące cele szczegółowe:
+\begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
+  \item opracowanie koncepcji gry, zasad ukończenia poziomu i~zestawu mechanik,
+  \item zaprojektowanie modułowej architektury aplikacji z~wykorzystaniem
+        wstrzykiwania zależności (biblioteka Zenject) i~podziału kodu na niezależne zestawy,
+  \item implementacja ruchu kuli, kolizji i~odbić z~wykorzystaniem systemu fizyki silnika,
+  \item implementacja przeciwników o~zachowaniach autonomicznych oraz systemu punktów
+        życia i~leczenia,
+  \item przygotowanie interfejsu użytkownika w~podejściu MVVM, w~którym widok jest
+        aktualizowany przez subskrypcje strumieni reaktywnych,
+  \item ograniczenie alokacji pamięci w~trakcie rozgrywki przez wielokrotne użycie obiektów
+        efektów cząsteczkowych (wzorzec \emph{Object Pool}),
+  \item zapis wyników rozgrywki oraz integracja z~usługami zewnętrznymi (Firebase,
+        Appodeal) na poziomie inicjalizacji,
+  \item przygotowanie wersji instalacyjnej na urządzenia z~systemem Android i~przetestowanie
+        działania gry.
+\end{itemize}
+
+Założono, że gra ma być kompletna z~punktu widzenia gracza (menu, wybór poziomu, ekran
+ładowania, interfejs rozgrywki, okno zakończenia i~statystyki), natomiast nacisk w~części
+opisowej zostanie położony na rozwiązania architektoniczne i~sposób ich realizacji w~kodzie.
+
+\section{Zakres pracy}
+
+Zakres pracy obejmował zarówno część koncepcyjną, jak i~wykonanie działającej aplikacji.
+Prace rozpoczęto od określenia mechaniki sterowania. Zrezygnowano ze sterowania klawiaturą
+na rzecz gestu przeciągnięcia od kuli: długość przeciągnięcia wyznacza siłę, a~jego
+kierunek, odwrócony o~180°, kierunek ruchu. Takie sterowanie działa w~ten sam sposób
+z~myszą i~na ekranie dotykowym, co ułatwiło późniejsze przeniesienie gry na system Android.
+
+Następnie przygotowano szkielet architektury: kontekst projektu i~konteksty scen biblioteki
+Zenject, instalatory dla poszczególnych obszarów gry, mechanizm wczytywania konfiguracji
+z~plików JSON oraz podział kodu na zestawy kompilacji (\emph{assembly definitions}).
+Na tej podstawie zaimplementowano kolejne mechaniki:
+\begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
+  \item ruch kuli, tarcie, odbicia od ścian i~przeciwników wraz z~animacją zgniecenia kuli,
+  \item monety, fabrykę monet i~warunek odblokowania mety,
+  \item dwa typy przeciwników: patrolujące kaktusy i~nieruchome grzyby,
+  \item punkty życia, apteczki leczące kulę, okno przegranej i~wygranej,
+  \item pola przyspieszające, odbijacze, obracające się belki i~ruchome ściany,
+  \item losowy wiatr z~wskaźnikiem kierunku, minimapę i~przycisk wypychający zablokowaną kulę,
+  \item pomiar czasu przejścia poziomu, zapis najlepszego czasu i~okno statystyk w~menu.
+\end{itemize}
+
+Przygotowano trzy poziomy o~rosnącej trudności, scenę menu głównego, scenę ładowania oraz
+scenę rozruchową inicjalizującą usługi zewnętrzne. Ostatnim etapem było przygotowanie
+procesu budowania wersji na system Android, testy działania oraz opracowanie niniejszej
+dokumentacji. Rysunek~\ref{rys:hud-wstep} przedstawia widok rozgrywki na pierwszym poziomie.
+
+\begin{figure}[!htb]
+  \centering
+  \zrzut[0.72\textwidth]{poziom1_hud}
+  \caption{Widok rozgrywki na pierwszym poziomie gry \emph{Ball Finisher}; \zrodloWlasne}
+  \label{rys:hud-wstep}
+\end{figure}
+
+\section{Problematyka pracy}
+
+Pierwszym obszarem problemowym było pogodzenie fizyki silnika z~oczekiwaniami gracza
+wobec gry zręcznościowej. Symulacja ciała sztywnego w~silniku PhysX traktuje kulę jak
+obiekt fizyczny: prędkość maleje w~sposób zależny od materiałów, a~odbicia zależą od
+współczynników sprężystości i~kąta zderzenia. Gracz oczekuje natomiast, że kula po
+uderzeniu w~ścianę odbije się zgodnie z~zasadą „kąt padania równa się kątowi odbicia”
+i~straci przewidywalną część prędkości. Z~tego powodu ruch kuli jest wyznaczany przez
+własny model (kierunek i~moc pchnięcia), a~silnik fizyki odpowiada głównie za wykrywanie
+kolizji i~rozwiązywanie przenikania obiektów.
+
+Drugim problemem było sterowanie na ekranie dotykowym. Gest musi rozpoczynać się na kuli,
+a~nie w~dowolnym miejscu ekranu, ponieważ w~przeciwnym razie przypadkowe dotknięcie
+wystrzeliwałoby kulę. Wymagało to rzutowania promienia z~kamery na scenę i~pominięcia
+obiektów typu \emph{trigger} (pól przyspieszających, apteczek, mety), które mogłyby
+przesłonić kulę stojącą wewnątrz nich. Dodatkowo kula zatrzymana za ścianą bywa
+niewidoczna dla gracza, co wymusiło dodanie przycisku awaryjnego wypchnięcia.
+
+Trzecim obszarem była organizacja przepływu zdarzeń. W~grze występują łańcuchy zdarzeń
+obejmujące kilka modułów (kolizja $\rightarrow$ animacja $\rightarrow$ licznik $\rightarrow$
+meta $\rightarrow$ okno końca poziomu). Każda subskrypcja musi zostać zwolniona wraz ze
+zniszczeniem obiektu, inaczej dochodzi do wycieków pamięci i~wywołań na nieistniejących
+obiektach po przeładowaniu sceny. Konieczne było więc konsekwentne zarządzanie czasem
+życia subskrypcji przez interfejs \klasa{IDisposable}.
+
+Czwarty problem wynikał z~samego silnika: obiekty \klasa{MonoBehaviour} są tworzone przez
+Unity, więc nie można przekazać im zależności przez konstruktor, a~obiekty tworzone
+w~trakcie gry muszą powstawać przez kontener zależności, co wpłynęło na projekt fabryk.
+Ostatnim zagadnieniem była zgodność z~kompilacją IL2CPP stosowaną na Androidzie, która
+usuwa nieużywany kod i~może zablokować deserializację plików konfiguracyjnych wykonywaną
+przez refleksję.
+
+Oceniając realizację projektu, należy wskazać różnice pomiędzy wnioskiem o~temat a~wykonaną
+aplikacją. Wniosek przewidywał grę desktopową i~bibliotekę UniRx. W~trakcie prac platformą
+docelową stał się Android, ponieważ sterowanie gestem okazało się naturalne dla ekranu
+dotykowego, a~zamiast UniRx zastosowano bibliotekę R3 tego samego autora, rozwijaną jako
+jej następca \cite{r3,unirx}. Wersja uruchomiona w~edytorze Unity nadal jest w~pełni grywalna
+przy użyciu myszy. Integracja z~Firebase została ograniczona do inicjalizacji i~weryfikacji
+zależności, a~zapis danych obejmuje wyniki poziomów przechowywane lokalnie. Szczegółowe
+omówienie tych decyzji zawiera rozdział~\ref{rozdz:zakonczenie}.
+
+\section{Przegląd rynku i stan dostępnych rozwiązań}
+
+Gry, w~których gracz kieruje toczącą się kulą przez plansze z~przeszkodami, są obecne na
+rynku od dziesięcioleci. Różnią się przede wszystkim sposobem sterowania: część z~nich
+pozwala bezpośrednio kierować kulą, inne każą przechylać planszę lub nadawać kuli
+jednorazowy impuls, jak w~grach golfowych. W~tej części omówiono cztery tytuły, które pod
+różnymi względami są bliskie projektowi opisanemu w~pracy.
+
+\subsection{Super Monkey Ball}
+
+\emph{Super Monkey Ball} to seria gier wydawana przez firmę Sega, zapoczątkowana w~2001
+roku grą opracowaną przez studio Amusement Vision, wydaną najpierw na automaty, a~następnie
+na konsolę GameCube \cite{gra-smb}. Gracz nie steruje bezpośrednio postacią zamkniętą
+w~przezroczystej kuli, lecz przechyla całą planszę, przez co kula toczy się pod wpływem
+grawitacji. Celem jest dotarcie do mety, zanim upłynie czas przeznaczony na planszę;
+upływ czasu lub spadek z~planszy kosztuje życie, a~zbierane po drodze banany zwiększają
+wynik.
+
+Sterowanie przechyłem planszy wymaga precyzyjnego kontrolera analogowego; jego
+odpowiednik na telefonie, oparty na czujnikach ruchu, był sprawdzany również w~niniejszym
+projekcie, ale został odrzucony po testach (podrozdział~\ref{sec:poprawki}).
+
+\subsection{Marble It Up!}
+
+\emph{Marble It Up!} to gra zespołu The Marble Collective wydana w~2018 roku na konsolę
+Nintendo Switch i~komputery osobiste, rozwinięta w~2023 roku do wersji \emph{Marble It Up!
+Ultra} \cite{gra-miu}. Gracz bezpośrednio steruje toczącą się kulką na trójwymiarowych
+planszach, z~których można spaść. Podstawą rywalizacji jest czas przejścia poziomu: za
+szybkie ukończenie przyznawane są medale, wyniki trafiają do globalnych tablic
+rankingowych, a~gracz może ścigać się z~zapisem wcześniejszego przejazdu.
+
+Ten sam mechanizm powrotu do ukończonych poziomów w~celu poprawy wyniku zastosowano
+w~opisywanej grze w~postaci licznika czasu i~zapisu najlepszego czasu każdego poziomu.
+
+\subsection{Golf Battle}
+
+\emph{Golf Battle} to mobilna gra w~mini-golfa wydana przez firmę Miniclip w~2018 roku na
+systemy Android i~iOS \cite{gra-golf}. Strzał wykonuje się przez odciągnięcie palca od
+piłki i~jego zwolnienie: długość przeciągnięcia określa siłę uderzenia, a~kierunek
+przeciwny do ruchu palca wyznacza tor piłki \cite{gra-golf-recenzja}. Rozgrywka toczy się
+w~trybie wieloosobowym, w~którym na tym samym torze może jednocześnie grać do sześciu
+osób.
+
+Sterowanie przyjęte w~\emph{Ball Finisher} działa na tej samej zasadzie, ale strzał można
+wykonać również w~czasie ruchu kuli, a~na planszy działają przeciwnicy, wiatr i~elementy
+zmieniające jej prędkość.
+
+\subsection{Angry Birds}
+
+\emph{Angry Birds} fińskiego studia Rovio Entertainment, wydana w~grudniu 2009 roku na
+system iOS, a~później na wiele innych platform, spopularyzowała na ekranach dotykowych
+mechanikę procy \cite{gra-ab}. Gracz odciąga ptaka na gumie procy,
+a~po zwolnieniu ptak leci po torze balistycznym. Siła i~kąt rzutu wynikają wprost
+z~położenia palca względem procy, a~ślad poprzedniego lotu pozostaje na ekranie, co
+pozwala korygować kolejne strzały.
+
+Gra pokazała, że sterowanie oparte na odciągnięciu i~zwolnieniu jest zrozumiałe bez
+samouczka; w~opisywanym projekcie kierunek strzału podpowiada linia celownicza.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Porównanie wybranych gier z~opracowaną grą \emph{Ball Finisher}; \zrodloWlasne}
+  \label{tab:porownanie-gier}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.35cm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X >{\centering\arraybackslash}p{1.45cm}}
+    \toprule
+    \textbf{Gra} & \textbf{Sterowanie} & \textbf{Cel poziomu} & \textbf{Zagrożenia} & \textbf{Punkty życia} \\
+    \midrule
+    Super Monkey Ball & przechylanie planszy & dotarcie do mety w~limicie czasu & spadek z~planszy, upływ czasu & nie \\
+    Marble It Up! & bezpośrednie sterowanie kulką & dotarcie do mety, jak najkrótszy czas & spadek z~planszy & nie \\
+    Golf Battle & przeciągnięcie i~zwolnienie & trafienie do dołka & przeszkody na torze & nie \\
+    Angry Birds & odciągnięcie procy & zniszczenie celów & brak & nie \\
+    \midrule
+    Ball Finisher & przeciągnięcie i~zwolnienie, także w~ruchu & zebranie monet, dotarcie do mety & przeciwnicy, przeszkody ruchome, wiatr & tak \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Zestawienie w~tabeli~\ref{tab:porownanie-gier} pokazuje, że opracowana gra łączy sterowanie
+znane z~gier golfowych z~celem i~strukturą poziomów typowymi dla gier z~toczącą się kulą.
+Elementem wyróżniającym jest system punktów życia: kontakt z~przeciwnikiem nie kończy od
+razu rozgrywki, lecz zmniejsza zapas zdrowia, który można odnowić, zbierając apteczki.
+
+\section{Układ i struktura pracy}
+
+Praca została podzielona na sześć rozdziałów. Rozdział pierwszy ma charakter wprowadzający:
+przedstawia uzasadnienie wyboru tematu, cel i~zakres pracy, problematykę oraz przegląd
+podobnych gier. W~rozdziale drugim omówiono podstawy teoretyczne i~technologie, na których
+oparto projekt: model komponentowy i~cykl życia obiektów w~Unity, system fizyki,
+wstrzykiwanie zależności, programowanie reaktywne, wzorzec MVVM oraz wzorce projektowe
+stosowane w~grach. Rozdział trzeci zawiera koncepcję gry, wymagania funkcjonalne
+i~niefunkcjonalne, przypadki użycia oraz projekt architektury. W~rozdziale czwartym opisano
+implementację poszczególnych modułów wraz z~fragmentami kodu źródłowego. Rozdział piąty
+przedstawia sposób testowania gry, wyniki testów funkcjonalnych i~zmiany wprowadzone na ich
+podstawie. Rozdział szósty podsumowuje pracę, ocenia stopień realizacji celów i~wskazuje
+kierunki dalszego rozwoju. Pracę uzupełniają bibliografia, spisy rysunków, tabel i~listingów
+oraz załączniki zawierające informacje o~kodzie źródłowym, pliki konfiguracyjne
+i~instrukcję budowania aplikacji.

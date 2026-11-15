@@ -1,0 +1,91 @@
+% ============================================================================
+%  Rozdział 6. Zakończenie i wnioski
+% ============================================================================
+\chapter{Zakończenie i wnioski}
+\label{rozdz:zakonczenie}
+
+W~ramach pracy zaprojektowano i~zaimplementowano trójwymiarową grę zręcznościową
+\emph{Ball Finisher} w~silniku Unity. Gra zawiera trzy poziomy, kompletny przepływ od menu
+głównego przez ekran ładowania do rozgrywki i~okna końca poziomu, system punktów życia,
+dwa typy przeciwników, sześć mechanizmów zmieniających ruch kuli (pola przyspieszające,
+odbijacze, obracające się belki, ruchome ściany, wiatr i~przycisk \emph{Push}), minimapę
+oraz pomiar czasu z~zapisem statystyk. Gra działa w~edytorze Unity oraz na urządzeniach
+z~systemem Android w~wersji 9 lub nowszej.
+
+\section{Podsumowanie realizacji celów}
+
+Cel główny pracy został osiągnięty. Zrealizowano mechanikę zbierania monet
+z~warunkiem odblokowania mety, sterowanie gestem przeciągnięcia, odbicia i~tarcie, system
+przeciwników o~zachowaniach autonomicznych (patrol kaktusów) oraz punkty życia z~leczeniem.
+Architekturę oparto na wstrzykiwaniu zależności z~biblioteką Zenject i~podziale kodu na
+50~zestawów kompilacji, a~logikę rozgrywki oddzielono od komponentów silnika. Interfejs
+użytkownika zbudowano w~podejściu MVVM, a~komunikację pomiędzy modułami oparto na
+strumieniach biblioteki R3 i~operacjach asynchronicznych UniTask. Efekty cząsteczkowe
+korzystają z~puli obiektów, a~monety z~analogicznego mechanizmu wielokrotnego użycia.
+
+Część założeń wniosku zrealizowano w~zmienionej formie. Zamiast biblioteki UniRx
+wykorzystano R3, którą autor UniRx wskazuje jako jej rozwiniętą wersję; zmiana ta nie
+wpłynęła na architekturę, ponieważ obie biblioteki opierają się na tych samych pojęciach.
+Platformą docelową stał się Android, ponieważ sterowanie gestem okazało się naturalne dla
+ekranu dotykowego, przy czym gra pozostaje w~pełni grywalna w~edytorze przy użyciu myszy.
+Zapis danych obejmuje lokalne statystyki poziomów, a~integracja z~Firebase została
+ograniczona do inicjalizacji i~weryfikacji zależności. Przygotowana obsługa reklam
+z~nagrodą Appodeal nie została jeszcze podłączona do rozgrywki.
+
+\section{Najważniejsze wnioski}
+
+Pierwszy wniosek dotyczy kosztów i~korzyści wstrzykiwania zależności w~grze tej skali.
+Kod gry liczy 256~plików, z~czego znaczną część stanowią bindery, klasy danych i~komponenty
+znacznikowe. Dla małej gry jest to narzut wyraźny, jednak w~zamian każda klasa jawnie
+deklaruje swoje zależności, a~żadna nie wyszukuje obiektów w~scenie. Dodanie w~późnej fazie
+projektu wiatru, minimapy, licznika czasu, apteczek i~trzech typów przeszkód wymagało
+jedynie niewielkich rozszerzeń istniejących klas, takich jak operacje \kod{Launch}
+i~\kod{Knock} oraz prędkość dryfu w~logice ruchu kuli czy metoda leczenia w~klasie
+\klasa{HealthStorage}, a~nowe moduły zostały podłączone przez kolejne bindery
+w~istniejących instalatorach. Krótkie klasy o~jednej
+odpowiedzialności, zgodne z~zaleceniami McConnella \cite{mcconnell}, ułatwiły też
+lokalizowanie błędów zgłaszanych w~sesjach testowych.
+
+Drugi wniosek dotyczy programowania reaktywnego. Strumienie R3 pozwoliły zapisać łańcuchy
+zdarzeń, takie jak droga od zebrania monety do okna końca poziomu, w~sposób, w~którym
+nadawca nie zna odbiorców. Wymaga to jednak dyscypliny: każda subskrypcja musi zostać
+zwolniona, a~gdy wynik zależy od kolejności reakcji kilku odbiorców, kolejność subskrypcji
+staje się częścią kontraktu, co w~projekcie trzeba było udokumentować w~komentarzu.
+
+Trzeci wniosek dotyczy fizyki. Własny model ruchu oparty na kierunku i~mocy, nałożony na
+symulację PhysX, dał przewidywalne odbicia i~drogę hamowania, którą można obliczyć
+z~parametrów konfiguracji. Przeniesienie wszystkich wartości liczbowych do plików JSON
+okazało się szczególnie przydatne, ponieważ większość poprawek po sesjach testowych
+dotyczyła strojenia parametrów, a~nie zmian w~kodzie.
+
+Czwarty wniosek wynika z~testów. Automatyczny scenariusz uruchomieniowy ujawnił
+ostrzeżenie Zenject związane z~tworzeniem kuli w~trakcie instalacji powiązań, a~analiza
+modelu sterowania pokazała, że moc strzału zależy od odległości mierzonej w~pikselach.
+Na ekranach o~różnej gęstości pikseli ten sam fizyczny gest daje więc różną moc. Oba
+problemy nie utrudniają gry, ale wskazują miejsca, które należy poprawić przed dalszym
+rozwojem.
+
+\section{Dalsze prace i możliwości rozwoju}
+
+Najbliższe prace powinny objąć usprawnienia wskazane w~testach: normalizację długości
+gestu względem rozmiaru lub gęstości pikseli ekranu, przeniesienie tworzenia kuli do etapu
+inicjalizacji kontenera, obsługę wyczerpania puli efektów oraz eliminację alokacji przy
+aktualizacji licznika czasu. Klasy logiki nie zależą od komponentów silnika, więc można je
+objąć testami jednostkowymi w~trybie edycji pakietu Unity Test Framework bez uruchamiania
+scen. Warto również wykonać systematyczne pomiary wydajności na kilku telefonach.
+
+Z~punktu widzenia gracza naturalnymi kierunkami rozwoju są: warstwa dźwiękowa, lokalizacja
+interfejsu na język polski, kolejne poziomy oraz edytor poziomów wykorzystujący istniejący
+mechanizm punktów startowych. Firebase, już zainicjalizowany w~grze, umożliwia dodanie
+zapisu postępów w~chmurze i~globalnych tablic najlepszych czasów, a~przygotowana klasa
+reklam z~nagrodą może posłużyć do przywracania zdrowia w~zamian za obejrzenie reklamy.
+
+\section{Obszary zastosowania opracowanych rozwiązań}
+
+Zastosowana architektura może posłużyć jako szablon dla innych niewielkich gier mobilnych
+tworzonych w~Unity. Elementy takie jak wczytywanie konfiguracji z~walidacją przed
+budowaniem, binder jako jednostka rejestracji powiązań, generyczne klasy MVVM dla prostych
+paneli interfejsu czy zautomatyzowane budowanie w~osobnej kopii projektu nie zależą od
+mechaniki tej konkretnej gry. Projekt może być także materiałem dydaktycznym pokazującym
+zastosowanie wstrzykiwania zależności i~programowania reaktywnego w~silniku, w~którym
+podejścia te nie są narzucane przez sam silnik.

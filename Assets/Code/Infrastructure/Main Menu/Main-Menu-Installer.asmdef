@@ -1,0 +1,20 @@
+{
+    "name": "Main-Menu-Installer",
+    "rootNamespace": "",
+    "references": [
+        "GUID:0d8beb7f090555447a6cf5ce9e54dbb4",
+        "GUID:417b4f64453c4a74992541d83927d756",
+        "GUID:c02b322855574788bd8e38cca1f95039",
+        "GUID:e91b4e0f2241ac34aade4a472a96b9d0",
+        "GUID:ec75a737a3289e140825d8c8cd49ebde"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

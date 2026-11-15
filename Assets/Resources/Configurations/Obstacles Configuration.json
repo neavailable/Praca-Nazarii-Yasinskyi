@@ -1,0 +1,11 @@
+{
+    "Obstacles":
+    {
+        "BumperPower"       : 12.0,
+        "BumperMaxSpeed"    : 30.0,
+        "KnockPower"        : 10.0,
+        "SpinnerSpeed"      : 90.0,
+        "MovingWallSpeed"   : 2.5,
+        "MovingWallDistance": 2.5
+    }
+}

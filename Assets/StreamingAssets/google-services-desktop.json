@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "648847075926",
+    "project_id": "golf-fbf23",
+    "storage_bucket": "golf-fbf23.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648847075926:android:95118706269377ddbf69f7",
+        "android_client_info": {
+          "package_name": "com.GolfCompany.Golf"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARYPyZD0tIBEDBwOK8h1XHqj_CB1aW9bM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

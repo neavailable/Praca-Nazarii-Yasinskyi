@@ -1,0 +1,15 @@
+﻿{
+    "Coin":
+    {
+        "ChangeSpeed"   : 0.05,
+        "ScaleFontSpeed": 100,
+        "MaxFontSize"   : 33
+    },
+
+    "Health":
+    {
+        "Delay"         : 0.05,
+        "DefaultHealth" : 100,
+        "MaxFontSize"   : 40
+    }
+}

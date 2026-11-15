@@ -1,0 +1,11 @@
+﻿{
+    "Movement":
+    {
+      "Speed": 3
+    },
+
+    "Damage":
+    {
+      "Damage": 29
+    }
+}

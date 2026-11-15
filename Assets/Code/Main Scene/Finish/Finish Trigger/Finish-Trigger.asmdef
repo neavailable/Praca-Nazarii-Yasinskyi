@@ -1,0 +1,16 @@
+{
+    "name": "Finish-Trigger",
+    "rootNamespace": "",
+    "references": [
+        "GUID:e91b4e0f2241ac34aade4a472a96b9d0"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

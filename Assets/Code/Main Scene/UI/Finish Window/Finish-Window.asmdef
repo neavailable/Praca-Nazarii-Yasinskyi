@@ -1,0 +1,17 @@
+{
+    "name": "Finish-Window",
+    "rootNamespace": "",
+    "references": [
+        "GUID:18fba59aeae050e4c8aa6991ae6ef8a5",
+        "GUID:b188a9a8c8f64da4fa7987a1d6950f7b"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

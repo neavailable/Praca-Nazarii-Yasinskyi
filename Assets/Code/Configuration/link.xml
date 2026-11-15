@@ -1,0 +1,4 @@
+<linker>
+  <!-- JSON constructors and readonly fields are accessed through reflection. -->
+  <assembly fullname="Configuration" preserve="all" />
+</linker>

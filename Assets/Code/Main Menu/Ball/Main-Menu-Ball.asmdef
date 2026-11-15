@@ -1,0 +1,17 @@
+{
+    "name": "Main-Menu-Ball",
+    "rootNamespace": "",
+    "references": [
+        "GUID:417b4f64453c4a74992541d83927d756",
+        "GUID:0c9bdbd2709fb0b44b9f217e7787f898"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

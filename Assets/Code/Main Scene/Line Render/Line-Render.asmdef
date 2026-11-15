@@ -1,0 +1,19 @@
+{
+    "name": "Line-Render",
+    "rootNamespace": "",
+    "references": [
+        "GUID:43dd6aa59db879f4db415ddee2c748a4",
+        "GUID:53829fb69ed29be418126595268f168e",
+        "GUID:e91b4e0f2241ac34aade4a472a96b9d0",
+        "GUID:1d0866101898b9a49b8fe873742313a9"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

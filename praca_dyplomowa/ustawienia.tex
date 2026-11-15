@@ -1,0 +1,199 @@
+% ============================================================================
+%  Ustawienia dokumentu (preambuła)
+% ============================================================================
+
+% --- Język i czcionki --------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,polish]{babel}
+\usepackage{amsmath}
+\usepackage{newtxtext,newtxmath}
+\usepackage[scaled=0.84]{beramono}
+\usepackage{microtype}
+
+% --- Układ strony -------------------------------------------------------------
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,inner=3.0cm,outer=2.0cm,footskip=1.1cm]{geometry}
+\usepackage{setspace}
+\setstretch{1.25}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt plus 1pt}
+\widowpenalty=10000
+\clubpenalty=10000
+\raggedbottom
+
+% --- Pakiety pomocnicze ------------------------------------------------------
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{etoolbox}
+\usepackage{dirtree}
+\usepackage{multicol}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,shapes.multipart,fit,calc,backgrounds}
+
+% --- Nagłówki rozdziałów -----------------------------------------------------
+\usepackage[explicit]{titlesec}
+\titleformat{\chapter}[block]
+  {\normalfont\fontsize{16}{20}\selectfont\bfseries}{}{0pt}
+  {\ifnum\value{chapter}>0 \thechapter.\hspace{0.5em}\fi#1}
+\titleformat{name=\chapter,numberless}[block]
+  {\normalfont\fontsize{16}{20}\selectfont\bfseries}{}{0pt}{#1}
+\titlespacing*{\chapter}{0pt}{0pt}{16pt}
+\titleformat{\section}
+  {\normalfont\fontsize{13}{16}\selectfont\bfseries}{\thesection.}{0.5em}{#1}
+\titlespacing*{\section}{0pt}{11pt}{4pt}
+\titleformat{\subsection}
+  {\normalfont\fontsize{12}{15}\selectfont\bfseries}{\thesubsection.}{0.5em}{#1}
+\titlespacing*{\subsection}{0.6cm}{8pt}{3pt}
+
+% --- Spis treści -------------------------------------------------------------
+\usepackage[titles]{tocloft}
+\renewcommand{\cfttoctitlefont}{\normalfont\fontsize{16}{20}\selectfont\bfseries}
+\renewcommand{\cftaftertoctitle}{\par\vspace{6pt}}
+\setlength{\cftbeforetoctitleskip}{0pt}
+\setlength{\cftaftertoctitleskip}{8pt}
+\renewcommand{\cftchapfont}{\normalfont}
+\renewcommand{\cftchappagefont}{\normalfont}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftchapaftersnum}{.}
+\renewcommand{\cftsecaftersnum}{.}
+\renewcommand{\cftsubsecaftersnum}{.}
+\setlength{\cftbeforechapskip}{5pt}
+\setlength{\cftchapindent}{0.4cm}
+\setlength{\cftsecindent}{1.2cm}
+\setlength{\cftsubsecindent}{2.2cm}
+\setlength{\cftchapnumwidth}{0.8cm}
+\setlength{\cftsecnumwidth}{1.0cm}
+\setlength{\cftsubsecnumwidth}{1.3cm}
+\setcounter{tocdepth}{1}
+
+% --- Stopka z numerem strony (strony nieparzyste po prawej, parzyste po lewej)
+\usepackage{fancyhdr}
+\fancyhf{}
+\fancyfoot[LE,RO]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[LE,RO]{\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+% --- Podpisy rysunków, tabel i listingów -------------------------------------
+\usepackage{caption}
+\captionsetup{labelsep=period,font={small,stretch=1.05},justification=centering,
+  singlelinecheck=false,skip=6pt}
+\captionsetup[table]{position=above}
+\captionsetup[figure]{position=below}
+
+% --- Listingi kodu C# ---------------------------------------------------------
+\usepackage{listings}
+\definecolor{kodSlowo}{RGB}{20,40,130}
+\definecolor{kodKomentarz}{RGB}{105,105,105}
+\definecolor{kodTekst}{RGB}{140,30,30}
+\definecolor{kodRamka}{RGB}{170,170,170}
+\renewcommand{\lstlistingname}{Listing}
+\renewcommand{\lstlistlistingname}{Spis listingów}
+\lstdefinestyle{csharp}{
+  language=[Sharp]C,
+  basicstyle=\linespread{1.0}\ttfamily\footnotesize,
+  keywordstyle=\bfseries\color{kodSlowo},
+  commentstyle=\itshape\color{kodKomentarz},
+  stringstyle=\color{kodTekst},
+  morekeywords={var,async,await,readonly,get,set,nameof,where},
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4,
+  xleftmargin=0.6cm,
+  xrightmargin=0.2cm,
+  frame=tb,
+  framerule=0.4pt,
+  rulecolor=\color{kodRamka},
+  framesep=4pt,
+  aboveskip=10pt,
+  belowskip=2pt,
+  captionpos=b,
+  literate={ą}{{\k{a}}}1 {ę}{{\k{e}}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ł}{{\l{}}}1
+           {ż}{{\.z}}1 {ź}{{\'z}}1 {ć}{{\'c}}1 {ń}{{\'n}}1
+           {Ą}{{\k{A}}}1 {Ę}{{\k{E}}}1 {Ó}{{\'O}}1 {Ś}{{\'S}}1 {Ł}{{\L{}}}1
+           {Ż}{{\.Z}}1 {Ź}{{\'Z}}1 {Ć}{{\'C}}1 {Ń}{{\'N}}1
+}
+\lstdefinestyle{json}{
+  basicstyle=\linespread{1.0}\ttfamily\scriptsize,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=none,
+  xleftmargin=0.2cm,
+  aboveskip=2pt,
+  belowskip=2pt,
+  stringstyle=\color{kodTekst},
+  morestring=[b]",
+}
+\lstset{style=csharp}
+
+% Tabele i drzewa katalogów składane z mniejszą interlinią.
+\AtBeginEnvironment{table}{\small\setstretch{1.08}}
+\AtBeginEnvironment{tabularx}{\setstretch{1.08}}
+\setlength{\DTbaselineskip}{13pt}
+\renewcommand*\DTstylecomment{\rmfamily\itshape\small}
+\renewcommand*\DTstyle{\ttfamily\small}
+
+% --- Odnośniki ---------------------------------------------------------------
+\usepackage[hidelinks,unicode,bookmarksnumbered]{hyperref}
+\urlstyle{same}
+\def\UrlBreaks{\do\/\do\-\do\_\do\.\do\?\do\=\do\&}
+% Ścieżki i identyfikatory z kropkami, łamane w miejscu "/" lub ".".
+\DeclareUrlCommand\sciezka{\def\UrlFont{\ttfamily\small}}
+\setlength{\emergencystretch}{3em}
+
+% --- Wpisy w spisach rysunków, tabel i listingów -----------------------------
+% Format zgodny z wcześniejszymi pracami: "Rysunek 1.1. Podpis; Źródło: ... ..... 4".
+\makeatletter
+\newcommand{\spisWpis}[3]{%
+  \begingroup
+  \def\numberline##1{#1~##1.\ }%
+  \@dottedtocline{1}{0em}{0em}{#2}{#3}%
+  \endgroup}
+\AtBeginDocument{%
+  \renewcommand*{\l@figure}[2]{\spisWpis{Rysunek}{#1}{#2}}%
+  \renewcommand*{\l@table}[2]{\spisWpis{Tabela}{#1}{#2}}%
+  \renewcommand*{\l@lstlisting}[2]{\spisWpis{Listing}{#1}{#2}}%
+}
+\makeatother
+
+% --- Polecenia pomocnicze ----------------------------------------------------
+\newcommand{\zrodloWlasne}{Źródło: Opracowanie własne}
+\newcommand{\kod}[1]{\texttt{\small #1}}
+\newcommand{\klasa}[1]{\texttt{\small #1}}
+
+% Zrzut ekranu z gry; jeśli pliku brak, w jego miejscu pojawia się ramka.
+\newcommand{\zrzut}[2][\textwidth]{%
+  \IfFileExists{rysunki/gra/#2.png}%
+    {\includegraphics[width=#1]{rysunki/gra/#2.png}}%
+    {\fbox{\parbox[c][0.3\textheight][c]{#1}{\centering Brak pliku rysunki/gra/#2.png}}}}
+
+% Style diagramów TikZ.
+\tikzset{
+  diag/.style={font=\linespread{1.0}\selectfont\footnotesize, >=Stealth},
+  blok/.style={draw, rounded corners=2pt, align=center, inner sep=4pt, minimum height=8mm, fill=white},
+  modul/.style={blok, fill=black!4},
+  akcent/.style={blok, fill=blue!6},
+  strz/.style={-{Stealth[length=2.2mm]}, thick},
+  strzp/.style={-{Stealth[length=2.2mm]}, thick, dashed},
+  przypadek/.style={draw, ellipse, align=center, inner sep=2pt, minimum height=9mm, fill=white},
+}
+\newcommand{\aktor}[2]{% nazwa węzła, podpis
+  \begin{scope}[shift={(#1)}]
+    \draw[thick] (0,0.55) circle (0.16);
+    \draw[thick] (0,0.39) -- (0,-0.05);
+    \draw[thick] (-0.28,0.25) -- (0.28,0.25);
+    \draw[thick] (0,-0.05) -- (-0.22,-0.42);
+    \draw[thick] (0,-0.05) -- (0.22,-0.42);
+    \node[font=\footnotesize] at (0,-0.68) {#2};
+  \end{scope}}

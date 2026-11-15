@@ -1,0 +1,46 @@
+% ============================================================================
+%  Streszczenie i Abstract
+% ============================================================================
+\clearpage
+\begingroup
+\setstretch{1.2}
+\noindent{\fontsize{16}{20}\selectfont\bfseries Streszczenie\par}
+\vspace{10pt}
+
+Przedmiotem pracy jest projekt i implementacja trójwymiarowej gry zręcznościowej
+\emph{Ball Finisher} w~silniku Unity 2022.3 z~wykorzystaniem języka C\#. Gracz steruje
+kulą, nadając jej kierunek i~siłę gestem przeciągnięcia, zbiera monety rozmieszczone na
+planszy, omija przeciwników oraz przeszkody ruchome, a~po zebraniu wszystkich monet
+dociera do punktu końcowego poziomu. Gra obejmuje trzy poziomy, system punktów życia
+i~leczenia, pola przyspieszające, odbijacze, obracające się belki, ruchome ściany, losowy
+wiatr, minimapę oraz pomiar czasu z~zapisem najlepszych wyników. Część inżynierska pracy
+dotyczy architektury aplikacji: kompozycji zależności z~użyciem biblioteki Zenject, podziału
+kodu na 50~zestawów kompilacji (\emph{assembly definitions}), oddzielenia logiki rozgrywki
+od komponentów silnika, interfejsu użytkownika w~podejściu MVVM oraz obsługi zdarzeń
+za pomocą biblioteki reaktywnej R3 i~operacji asynchronicznych UniTask. Parametry rozgrywki
+są wczytywane z~plików JSON, a~efekty cząsteczkowe korzystają z~puli obiektów. Aplikację
+zbudowano na platformę Android z~zapleczem IL2CPP. W~pracy opisano także testy
+funkcjonalne oraz zmiany wprowadzone na podstawie sesji testowych rozgrywki.
+
+\vspace{18pt}
+\noindent{\fontsize{16}{20}\selectfont\bfseries Abstract\par}
+\vspace{10pt}
+
+\begin{otherlanguage}{english}
+This thesis presents the design and implementation of \emph{Ball Finisher}, a~3D arcade
+game built with the Unity 2022.3 engine and C\#. The player launches a~ball with
+a~drag-and-release gesture that sets its direction and power, collects the coins placed on
+the level, avoids enemies and moving obstacles, and reaches the finish point that appears
+once every coin has been collected. The game contains three levels, health and healing,
+boost pads, bumpers, spinning bars, moving walls, random wind, a~minimap and a~level timer
+with stored best times. The engineering part concerns the application architecture:
+dependency injection with the Zenject framework, code split into 50 assembly definitions,
+game logic kept apart from engine components, a~user interface following the MVVM pattern,
+and event handling built on the reactive library R3 together with UniTask for asynchronous
+operations. Gameplay parameters are loaded from JSON files and particle effects are reused
+through an object pool. The application was built for Android using the IL2CPP backend.
+The thesis also describes functional testing and the changes made after play-testing
+sessions.
+\end{otherlanguage}
+\endgroup
+\clearpage

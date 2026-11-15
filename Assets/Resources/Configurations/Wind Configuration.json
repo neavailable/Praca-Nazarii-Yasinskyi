@@ -1,0 +1,7 @@
+{
+    "Wind":
+    {
+        "MinStrength": 0.3,
+        "MaxStrength": 0.8
+    }
+}

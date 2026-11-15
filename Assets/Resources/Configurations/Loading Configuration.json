@@ -1,0 +1,7 @@
+﻿{
+    "LoadingTime":
+    {
+        "MinLoadingTime": 1,
+        "MaxLoadingTime": 4
+    }
+}

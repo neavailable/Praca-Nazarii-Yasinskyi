@@ -1,0 +1,896 @@
+% ============================================================================
+%  Rozdział 4. Implementacja systemu
+% ============================================================================
+\chapter{Implementacja systemu}
+\label{rozdz:implementacja}
+
+W~poprzednich rozdziałach przedstawiono założenia, wymagania i~projekt architektury.
+Ten rozdział opisuje, w~jaki sposób zostały one zrealizowane w~kodzie. Omówiono kolejno
+strukturę projektu, wczytywanie konfiguracji, kompozycję zależności, sterowanie i~model
+ruchu kuli, przeszkody, przeciwników i~punkty życia, monety i~warunek ukończenia poziomu,
+pulę efektów cząsteczkowych, interfejs użytkownika w~podejściu MVVM, animacje
+asynchroniczne, minimapę, pomiar czasu oraz budowanie wersji na system Android. Fragmenty
+kodu pochodzą bezpośrednio z~repozytorium projektu; pominięto w~nich dyrektywy
+\kod{using}, deklaracje przestrzeni nazw oraz części niezwiązane z~omawianym zagadnieniem.
+
+\section{Struktura projektu}
+
+Kod gry znajduje się w~katalogu \sciezka{Assets/Code} i~liczy 256~plików C\# o~łącznej
+objętości około 7~tys. wierszy. Zasoby Unity (sceny, prefabrykaty, materiały, animacje)
+oraz pliki konfiguracyjne są przechowywane w~osobnych katalogach, a~kod narzędzi edytora,
+w~tym skrypt budowania wersji Android, w~katalogu \sciezka{Assets/Editor}. Biblioteki
+zewnętrzne znajdują się w~katalogach \kod{Plugins}, \kod{Appodeal}, \kod{Firebase}
+i~\kod{Packages}. Najważniejsze elementy struktury przedstawiono na
+rysunku~\ref{rys:struktura}.
+
+\begin{figure}[!htb]
+  \centering
+  \begin{minipage}{0.92\textwidth}
+  \dirtree{%
+    .1 Assets/.
+    .2 Code/\DTcomment{kod gry podzielony na 50 zestawów kompilacji}.
+    .3 Configuration/\DTcomment{klasy konfiguracji i~danych, link.xml}.
+    .3 Infrastructure/\DTcomment{instalatory, bindery i~fabryki Zenject}.
+    .3 Main Scene/\DTcomment{kula, monety, przeciwnicy, przeszkody, interfejs}.
+    .3 Main Menu/\DTcomment{piłka w~tle menu, okno statystyk}.
+    .3 Loading/, Bootstrap/, All Scenes/\DTcomment{przepływ scen i~statystyki}.
+    .3 Firebase Settings/, Ad Settings/\DTcomment{usługi zewnętrzne}.
+    .2 Editor/\DTcomment{budowanie APK, konfiguracja poziomów}.
+    .2 Input/\DTcomment{akcje Input System i~odczyt pozycji wskaźnika}.
+    .2 Resources/.
+    .3 Configurations/\DTcomment{18 plików JSON z~parametrami rozgrywki}.
+    .3 ProjectContext.prefab\DTcomment{kontekst projektu Zenject}.
+    .2 Scenes/\DTcomment{Bootstrap, Main Menu, Loading, Level 1--3}.
+    .2 Prefabs/\DTcomment{kula, monety, przeciwnicy, przeszkody, elementy HUD}.
+    .2 Plugins/\DTcomment{Zenject, biblioteki natywne}.
+  }
+  \end{minipage}
+  \caption{Struktura katalogów projektu; \zrodloWlasne}
+  \label{rys:struktura}
+\end{figure}
+
+Kod podzielono na 50~zestawów kompilacji, a~dodatkowy zestaw \kod{Input} zawiera klasę
+akcji wygenerowaną przez pakiet Input System. Zestawy deklarują łącznie 136~odwołań do
+innych zestawów, zarówno projektu, jak i~bibliotek takich jak Zenject czy UniTask. 11~z~nich
+nie odwołuje się do żadnego innego zestawu (są to głównie komponenty znacznikowe i~klasy
+danych), a~najwięcej zależności (27) ma zestaw \kod{Main-Scene-Installer}, co jest zgodne
+z~jego rolą korzenia kompozycji sceny poziomu. Podział zestawów na grupy przedstawia tabela~\ref{tab:asmdef}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Grupy zestawów kompilacji w~projekcie; \zrodloWlasne}
+  \label{tab:asmdef}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.2cm} c X}
+    \toprule
+    \textbf{Grupa} & \textbf{Liczba} & \textbf{Zestawy} \\
+    \midrule
+    Infrastruktura & 6 & Main-Scene-Installer, Main-Menu-Installer, Loading-Installers, Bootstrap-Installer, All-Scenes-Installer, Load-Level \\
+    Konfiguracja & 1 & Configuration \\
+    Kula i~sterowanie & 10 & Ball, Ball-Colliders, BallDestroyer, Ball-Marker, Bounce-Animation, UI-Displayable, User-Input, Ray Points, Line-Render, Main-Camera \\
+    Obiekty planszy & 17 & Coin, Coin-Value, Enemy, Finish, Finish-Marker, Finish-Trigger, Ground, Wall, WallsMarker, Heal, Boost-Pad, Obstacles, Wind, Objects, StartPoints, Classes-Parameters, Dust-Effect \\
+    Interfejs & 10 & UI-Coins, UI-Health-Bar, Information-Panel, Level-Timer, Minimap, Push-Button, Finish-Window, Finish-Window-Marker, UIAnimations, Buttons \\
+    Sceny & 5 & All-Scenes, Bootstrap, Loading, Main-Menu, Main-Menu-Ball \\
+    Usługi & 1 & Firebase-Settings \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Konfiguracja parametrów rozgrywki}
+
+Wszystkie wartości liczbowe wpływające na rozgrywkę są przechowywane w~plikach JSON
+w~katalogu \sciezka{Resources/Configurations}. Plik jest podzielony na sekcje, a~każdej
+sekcji odpowiada para klas: klasa danych z~polami \kod{readonly} i~konstruktorem
+przyjmującym wszystkie wartości oraz klasa konfiguracji dziedzicząca po generycznej klasie
+\klasa{AbstractConfiguration<T>} (listing~\ref{lst:konfiguracja}). Klasa bazowa wczytuje
+plik jako zasób tekstowy, wyodrębnia wskazaną sekcję i~deserializuje ją biblioteką
+Newtonsoft.Json \cite{newtonsoft}, która dopasowuje nazwy pól JSON do parametrów
+konstruktora.
+
+\begin{lstlisting}[caption={Generyczna klasa wczytująca sekcję pliku konfiguracyjnego; \zrodloWlasne},label=lst:konfiguracja]
+public abstract class AbstractConfiguration<T>
+{
+    private readonly string _resourcePath, _subsectionName;
+    protected AbstractConfiguration(string jsonName, string subsectionName)
+    {
+        _resourcePath = "Configurations/" + jsonName;
+        _subsectionName = subsectionName;
+    }
+    public T Load()
+    {
+        TextAsset config = Resources.Load<TextAsset>(_resourcePath);
+        if (config == null)
+            throw new FileNotFoundException($"Config resource not found: {_resourcePath}");
+        JToken subsection = JObject.Parse(config.text)[_subsectionName];
+        if (subsection == null)
+            throw new InvalidDataException($"Config {_resourcePath} has no section '{_subsectionName}'");
+        return subsection.ToObject<T>();
+    }
+}
+
+public class BallMovementConfiguration : AbstractConfiguration<BallMovementData>
+{
+    public BallMovementConfiguration() : base("Ball Configuration", "Movement") { }
+}
+\end{lstlisting}
+
+Klasy danych, np. \klasa{BallMovementData} z~polami \kod{MaxPushingPower}
+i~\kod{PushPowerDecrease}, nie mają żadnej logiki i~nie mogą zostać zmienione po
+utworzeniu, co wyklucza przypadkową modyfikację parametrów w~trakcie gry. Ponieważ
+Newtonsoft.Json tworzy obiekty przez refleksję, kompilator IL2CPP mógłby uznać ich
+konstruktory za nieużywane i~usunąć je z~wersji wynikowej. Zapobiega temu plik
+\kod{link.xml} z~wpisem \kod{<assembly fullname="Configuration" preserve="all"/>},
+który wyłącza z~usuwania cały zestaw konfiguracji. Komplet plików konfiguracyjnych
+zamieszczono w~załączniku~B.
+
+\section{Kompozycja zależności z wykorzystaniem Zenject}
+\label{sec:kompozycja}
+
+Kontekst projektu zawiera tylko jeden instalator, który rejestruje obiekt
+\klasa{LoadLevel} przechowujący nazwę poziomu wybranego w~menu. Pozostałe powiązania są
+rejestrowane w~kontekstach scen. Instalatory scen poziomów nie wywołują metod kontenera
+bezpośrednio, lecz budują listę binderów, czyli obiektów klasy pochodnej
+\klasa{Binder} (listing~\ref{lst:binder}). Każdy binder rejestruje jedną spójną grupę
+powiązań, np. dane wiatru i~obiekt \klasa{LevelWind} losujący kierunek oraz siłę wiatru
+na dany poziom.
+
+\begin{lstlisting}[caption={Klasa bazowa binderów i~binder rejestrujący wiatr; \zrodloWlasne},label=lst:binder]
+public abstract class Binder
+{
+    protected readonly DiContainer Container;
+    protected Binder(DiContainer container) => Container = container;
+    public abstract void Bind();
+}
+
+public class BindToWind : Binder
+{
+    private readonly WindData _windData;
+    public BindToWind(DiContainer container, WindData windData)
+        : base(container) => _windData = windData;
+    public override void Bind()
+    {
+        Container.Bind<WindData>().FromInstance(_windData).AsSingle();
+        Container.Bind<LevelWind>().FromInstance(new LevelWind(_windData)).AsSingle();
+    }
+}
+\end{lstlisting}
+
+Najciekawszy przypadek stanowi instalator kuli (listing~\ref{lst:ball-installer}).
+Kula nie istnieje w~scenie, lecz jest tworzona z~prefabrykatu podczas instalacji
+powiązań. Instalator działa w~dwóch etapach. Najpierw rejestruje zależności potrzebne
+kuli (dane ruchu, animacji, zdrowia, wiatru, komponent wejścia i~wyzwalacz mety),
+a~następnie tworzy kulę przez fabrykę korzystającą z~\kod{DiContainer.InstantiatePrefab},
+dzięki czemu wszystkie jej komponenty otrzymują te zależności. W~drugim etapie binder
+\klasa{BindFromBall} rejestruje w~kontenerze komponenty utworzonej kuli
+(\klasa{BallMarker}, \klasa{HealthBarModel}, \klasa{BallSpeedSender} i~inne), aby mogły
+z~nich korzystać kamera, minimapa, linia celownicza i~elementy interfejsu.
+
+\begin{lstlisting}[caption={Dwuetapowa instalacja powiązań kuli w~klasie BallInstaller; \zrodloWlasne},label=lst:ball-installer]
+public override void InstallBindings()
+{
+    CreateToBallBinders();
+    BindToBall();         // zależności potrzebne kuli
+    CreateFromBallBinders();
+    BindFromBall();       // komponenty utworzonej kuli dla pozostałych modułów
+}
+private void CreateFromBallBinders()
+{
+    BallFactory ballFactory = new
+    (
+        Container,
+        new BallPrefab(_ballMarker.gameObject),
+        _ballStartPoint.position,
+        Quaternion.identity
+    );
+    _fromBallBinders.Add(new BindFromBall(Container, ballFactory.InstantiateBall()));
+}
+\end{lstlisting}
+
+Komponenty \klasa{MonoBehaviour} otrzymują zależności przez metodę oznaczoną atrybutem
+\kod{[Inject]}, nazwaną w~projekcie \kod{Constructor}. Typowy komponent rozgrywki
+(listing~\ref{lst:ball-movement}) zapisuje otrzymane obiekty w~polach, w~metodzie
+\kod{Start} tworzy obiekt logiki, w~\kod{FixedUpdate} wywołuje jego metodę, a~przy
+dezaktywacji zwalnia jego subskrypcje. Sam komponent nie zawiera żadnej reguły gry.
+
+\begin{lstlisting}[caption={Komponent BallMovement jako adapter pomiędzy silnikiem a~logiką ruchu; \zrodloWlasne},label=lst:ball-movement]
+[RequireComponent(typeof(Rigidbody), typeof(SlowDownBall), typeof(BounceBall))]
+public class BallMovement : MonoBehaviour, IBallMovementContainer
+{
+    public AbstractBallMovementLogic BallMovementLogic { get; private set; }
+    private BallInput _ballInput;
+    private BallMovementData _ballMovementData;
+    [Inject]
+    private void Constructor(BallMovementData ballMovementData, BallInput ballInput)
+    {
+        _ballMovementData = ballMovementData;
+        _ballInput        = ballInput;
+    }
+    private void Start()
+    {
+        BallMovementLogic = new BallMovementLogic
+        (
+            GetComponent<Rigidbody>(), transform, _ballInput,
+            GetComponent<BounceBall>(), GetComponent<SlowDownBall>(),
+            _ballMovementData.MaxPushingPower, _ballMovementData.PushPowerDecrease
+        );
+    }
+    private void FixedUpdate() => BallMovementLogic.PushBall();
+    private void OnDisable() => BallMovementLogic.Dispose();
+}
+\end{lstlisting}
+
+Prefabrykaty przekazywane fabrykom są opakowane w~klasy takie jak \klasa{CoinPrefab},
+\klasa{CactusPrefab} czy \klasa{Walls}, dziedziczące po wspólnej klasie bazowej
+\klasa{AbstractGameObjectParametr}. Dzięki temu kontener rozróżnia kilka obiektów typu
+\klasa{GameObject} po typie opakowania, bez identyfikatorów tekstowych.
+
+\section{Sterowanie kulą}
+\label{sec:sterowanie}
+
+Akcja wejściowa \kod{Move} pliku \kod{Player Input.inputactions} jest typu przycisk
+i~ma dwa powiązania: lewy przycisk myszy oraz naciśnięcie pierwszego dotyku na ekranie.
+Wciśnięcie wywołuje zdarzenie \kod{performed}, a~zwolnienie \kod{canceled}. Pozycję
+wskaźnika odczytuje statyczna klasa \klasa{PlayerPointer}. W~wersji na Androida,
+wybieranej dyrektywą kompilacji warunkowej \kod{\#if UNITY\_ANDROID \&\& !UNITY\_EDITOR},
+odczytuje ona pozycję pierwszego dotyku z~urządzenia \klasa{Touchscreen}, a~w~edytorze
+pozycję uogólnionego wskaźnika \klasa{Pointer}, obsługującego mysz.
+
+Po wciśnięciu klasa \klasa{BallInputLogic} rzutuje promień z~kamery przez punkt ekranu
+i~sprawdza, czy pierwszy trafiony zderzacz należy do kuli. Wywołanie \kod{Physics.Raycast}
+otrzymuje parametr \kod{QueryTriggerInteraction.Ignore}, więc pole przyspieszające lub
+apteczka, w~których stoi kula, nie przesłaniają jej. Tylko gest rozpoczęty na kuli
+generuje zdarzenia wciśnięcia i~zwolnienia przekazywane dalej. Zdarzenie wciśnięcia
+aktywuje linię celowniczą (komponent \klasa{LineRenderer} rysowany w~każdym kroku fizyki
+od kuli do punktu podłoża pod palcem) oraz zapamiętuje punkt początkowy gestu
+(rysunek~\ref{rys:celowanie}).
+
+\begin{figure}[!htb]
+  \centering
+  \zrzut[0.66\textwidth]{poziom1_celowanie}
+  \caption{Celowanie: linia od kuli do punktu podłoża pod palcem; po zwolnieniu kula
+    porusza się w~kierunku przeciwnym; \zrodloWlasne}
+  \label{rys:celowanie}
+\end{figure}
+
+Moc i~kierunek strzału wyznacza klasa \klasa{PushPowerConverter}
+(listing~\ref{lst:push-power}). Moc zależy od odległości w~pikselach pomiędzy punktem
+wciśnięcia $\mathbf{s}_p$ i~zwolnienia $\mathbf{s}_r$ na ekranie, a~kierunek od położenia
+punktu zwolnienia na płaszczyźnie podłoża $\mathbf{g}_r$ względem rzutu środka kuli
+$\mathbf{b}$ na tę płaszczyznę:
+\begin{equation}
+  P = \min\left(\frac{\lVert \mathbf{s}_r - \mathbf{s}_p \rVert}{k},\; P_{\max}\right), \qquad
+  \mathbf{d} = -\frac{\mathbf{g}_r - \mathbf{b}}{\lVert \mathbf{g}_r - \mathbf{b} \rVert},
+  \label{eq:strzal}
+\end{equation}
+gdzie $k = 20$~px jest dzielnikiem mocy, a~$P_{\max} = 25$ mocą maksymalną. Maksymalną
+moc uzyskuje się więc przy przeciągnięciu o~500~pikseli. Punkt $\mathbf{g}_r$ jest
+wyznaczany jako przecięcie promienia kamery z~płaszczyzną $y = 0$ metodą
+\kod{Plane.Raycast}, co jest tańsze od rzutowania promienia na zderzacze sceny.
+
+\begin{lstlisting}[caption={Wyznaczanie mocy i~kierunku strzału; \zrodloWlasne},label=lst:push-power]
+public (float distance, Vector3 direction) ConvertToPushPower()
+{
+    float distance = Vector3.Distance(ScreenStartPoint, ScreenFinishPoint) / _pushPowerDecrease;
+    Vector3 normalizedDirection = -(GroundFinishPoint - GroundStartPoint).normalized;
+    if (distance > _maxPushingPower) distance = _maxPushingPower;
+    return (distance, normalizedDirection);
+}
+\end{lstlisting}
+
+\section{Model ruchu, tarcie i odbicia}
+
+Stan ruchu kuli opisują dwie wielkości: jednostkowy wektor kierunku $\mathbf{d}$
+i~moc $P$. W~każdym kroku fizyki logika ruchu nadpisuje prędkość ciała sztywnego:
+\begin{equation}
+  \mathbf{v} = P\,\mathbf{d} + \mathbf{w},
+  \label{eq:predkosc}
+\end{equation}
+gdzie $\mathbf{w}$ jest prędkością dryfu wywołanego wiatrem. Ponieważ kierunek leży
+zawsze w~płaszczyźnie poziomej, kula nie odrywa się od podłoża, a~moc $P$ jest
+jednocześnie jej prędkością w~metrach na sekundę. Klasa bazowa logiki ruchu udostępnia
+trzy operacje zmiany stanu (listing~\ref{lst:ruch}): \kod{Launch} dodaje moc z~ograniczeniem
+do zadanej wartości i~jest używana przez pola przyspieszające, odbijacze oraz przycisk
+\emph{Push}, \kod{Knock} gwarantuje jedynie minimalną moc i~jest używana przez przeszkody
+ruchome, a~prywatna metoda \kod{BounceBall} obsługuje odbicia. Każda zmiana mocy jest
+publikowana w~strumieniu \kod{PushingPowerChanged}, z~którego korzysta panel prędkości.
+
+\begin{lstlisting}[caption={Operacje zmiany stanu ruchu w~klasie AbstractBallMovementLogic; \zrodloWlasne},label=lst:ruch]
+// Drift is added on top of the push and is not slowed by friction, so it also moves a ball at rest.
+public void PushBall() => _rigidbody.velocity = Direction * PushingPower + Drift;
+public void Launch(Vector3 direction, float power, float maxPushingPower)
+{
+    Direction    = direction;
+    PushingPower = Mathf.Min(PushingPower + power, maxPushingPower);
+    PushingPowerChanged.OnNext(PushingPower);
+    BallPushed?.Invoke(Direction);
+}
+// Unlike Launch it adds no speed: a fast ball keeps its speed, a slow one gets at least the given power.
+public void Knock(Vector3 direction, float power)
+{
+    Direction    = direction;
+    PushingPower = Mathf.Max(PushingPower, power);
+    PushingPowerChanged.OnNext(PushingPower);
+    BallPushed?.Invoke(Direction);
+}
+private void BounceBall(Vector3 bounceDirection, float lostPower)
+{
+    Direction = bounceDirection;
+    PushingPower *= lostPower;
+    PushingPowerChanged.OnNext(PushingPower);
+    BallPushed?.Invoke(Direction);
+}
+\end{lstlisting}
+
+Tarcie realizuje komponent \klasa{Friction} podłoża. W~metodzie \kod{OnCollisionStay},
+wywoływanej w~każdym kroku fizyki, w~którym kula styka się z~podłożem, zmniejsza on moc
+o~stałą wartość:
+\begin{equation}
+  P_{n+1} = \max\left(P_n - f\,\Delta t,\; 0\right),
+  \label{eq:tarcie}
+\end{equation}
+gdzie $f = 4$ jest siłą tarcia z~pliku konfiguracyjnego, a~$\Delta t = 0{,}02$~s.
+Jest to ruch jednostajnie opóźniony, więc kula wystrzelona z~mocą maksymalną zatrzymuje
+się po czasie $P_{\max}/f = 6{,}25$~s, przebywając drogę $P_{\max}^2/(2f) \approx 78$~m,
+o~ile nie odbije się od przeszkody. Wartość ta jest porównywalna z~wymiarami poziomów
+(tabela~\ref{tab:poziomy}), co oznacza, że najsilniejszy strzał pozwala przejechać przez
+większą część planszy.
+
+Odbicia obsługuje klasa \klasa{Bounce}, używana przez ściany i~przeciwników. Przy kolizji
+z~kulą pobiera ona wektor normalny pierwszego punktu styku $\mathbf{n}$ i~przekazuje go
+do logiki odbicia kuli (listing~\ref{lst:odbicie}), która wyznacza nowy kierunek zgodnie
+z~prawem odbicia i~zmniejsza moc o~współczynnik $\lambda$ zależny od obiektu:
+\begin{equation}
+  \mathbf{d}' = \mathbf{d} - 2\,(\mathbf{d}\cdot\mathbf{n})\,\mathbf{n}, \qquad
+  P' = \lambda P, \qquad \lambda_{\text{ściana}} = 0{,}7,\;\; \lambda_{\text{przeciwnik}} = 0{,}2.
+  \label{eq:odbicie}
+\end{equation}
+Niska wartość współczynnika dla przeciwników sprawia, że zderzenie z~nimi prawie zatrzymuje
+kulę, co stanowi dodatkową karę obok utraty zdrowia.
+
+\begin{lstlisting}[caption={Wyznaczanie kierunku po odbiciu w~klasie BounceBallLogic; \zrodloWlasne},label=lst:odbicie]
+public void GetBounceDirection(GameObject collidedObject, Vector3 normal, float lostPower)
+{
+    GetBounceDirectionAction?.Invoke
+    (
+        Vector3.Reflect(_ballMovement.BallMovementLogic.Direction, normal),
+        lostPower
+    );
+    BallBounced?.Invoke(collidedObject);
+}
+\end{lstlisting}
+
+Obrót siatki kuli jest liczony niezależnie od nadawanej prędkości. Klasa
+\klasa{BallRotationLogic} w~każdym kroku fizyki wyznacza rzeczywiste przemieszczenie ciała
+sztywnego i~obraca siatkę wokół osi $\mathbf{y}\times\hat{\mathbf{v}}$. Pierwsza wersja
+obracała kulę na podstawie zadanej prędkości, przez co kula dociśnięta wiatrem do ściany
+kręciła się w~miejscu; obecne rozwiązanie usunęło ten efekt.
+
+\section{Przeszkody dynamiczne, pola specjalne i wiatr}
+
+Pole przyspieszające ma zderzacz w~trybie wyzwalacza. Po wjechaniu kuli wywołuje operację
+\kod{Launch} z~kierunkiem zgodnym z~osią $z$ pola rzutowaną na płaszczyznę poziomą,
+z~dodatkiem mocy 20 i~ograniczeniem do 35. Kula jest więc wyrzucana wzdłuż strzałek
+niezależnie od strony, z~której wjechała. Odbijacz działa na tej samej zasadzie, ale
+kierunek wyznacza wektor od środka odbijacza do kuli. Po trafieniu korpus odbijacza
+zostaje skokowo powiększony o~25\% i~w~ciągu 0{,}15~s liniowo wraca do pierwotnego
+rozmiaru, co stanowi wizualne potwierdzenie zderzenia.
+
+Obracające się belki i~ruchome ściany są ciałami kinematycznymi. Belka obraca się ze
+stałą prędkością kątową 90°/s, a~kierunek obrotu jest losowany przy starcie poziomu.
+Ruchoma ściana jest przesuwana w~każdym kroku fizyki metodą \kod{MovePosition} wzdłuż
+własnej osi $x$ ruchem harmonicznym:
+\begin{equation}
+  \mathbf{x}(t) = \mathbf{c} + \mathbf{a}\,A \sin\!\left(\frac{v}{A}\,t + \varphi\right),
+  \label{eq:sciana}
+\end{equation}
+gdzie $\mathbf{c}$ to położenie początkowe, $\mathbf{a}$ jednostkowy wektor osi, $A = 2{,}5$
+amplituda, a~$\varphi$ losowa faza. Pochodna tego wyrażenia ma wartość maksymalną równą
+$v$, więc parametr konfiguracyjny \kod{MovingWallSpeed} jest maksymalną prędkością
+ściany, a~okres ruchu wynosi $2\pi A/v \approx 6{,}3$~s. Faza jest losowana w~metodzie
+\kod{Awake}, dzięki czemu ściany na poziomie nie poruszają się synchronicznie.
+
+Obie przeszkody mają komponent \klasa{ObstacleKnocker}, który przy kontakcie wywołuje
+operację \kod{Knock} z~kierunkiem od punktu styku do środka kuli i~mocą co najmniej 10.
+Bez niego kula mogła zostać zakleszczona pomiędzy ruchomą przeszkodą a~ścianą lub
+przesuwana razem z~przeszkodą.
+
+Wiatr jest losowany raz na poziom przez obiekt \klasa{LevelWind}: kierunek z~rozkładu
+jednostajnego kąta w~zakresie $[0^\circ, 360^\circ)$, a~siła z~przedziału $[0{,}3;\,0{,}8]$.
+Komponent \klasa{BallWind} w~każdym kroku fizyki ustawia prędkość dryfu $\mathbf{w}$
+w~równaniu~(\ref{eq:predkosc}). Ponieważ dryf nie podlega tarciu, wiatr powoli przesuwa
+również nieruchomą kulę. Kierunek wiatru pokazuje strzałka w~interfejsie, obracana
+o~kąt pomiędzy kierunkiem wiatru a~rzutem osi kamery na płaszczyznę poziomą, dzięki czemu
+wskazuje kierunek zgodny z~tym, co widzi gracz. Jej rozmiar rośnie liniowo wraz z~siłą
+wiatru. Przycisk \emph{Push} jest aktywny tylko wtedy, gdy moc kuli wynosi zero, i~nadaje
+jej moc 8 w~losowym kierunku.
+
+\section{System przeciwników i punktów życia}
+
+Punkty startowe przeciwników są obiektami potomnymi znacznika \klasa{AllEnemiesMarker}.
+Każdy z~nich ma komponent \klasa{EnemyStartPoint} z~polem określającym typ przeciwnika.
+Fabryka \klasa{EnemiesFactory} rozdziela punkty na dwie listy i~przekazuje je fabrykom
+kaktusów i~grzybów. Fabryka kaktusów przekazuje do kontenera punkt startowy jako
+dodatkowy argument wywołania \kod{InstantiatePrefabForComponent}, ponieważ dwa obiekty
+potomne punktu startowego wyznaczają końce trasy patrolu. Logika ruchu kaktusa przesuwa go
+metodą \kod{Vector3.MoveTowards} z~prędkością 3~m/s pomiędzy tymi punktami i~zawraca po
+dotarciu do celu, a~osobna klasa obraca model w~kierunku bieżącego celu. Grzyby pozostają
+nieruchome i~otrzymują losowy obrót wokół osi pionowej.
+
+Prefabrykaty obu przeciwników mają dwa zderzacze potomne. \emph{Damage Collider} zadaje
+obrażenia obiektowi, który z~nim kolidował, jeśli obiekt ten implementuje interfejs
+\klasa{IGetDamage}. \emph{Death Collider} po zderzeniu z~kulą uruchamia animację śmierci,
+zatrzymuje ruch kaktusa i~po 1,7~s dezaktywuje przeciwnika. Oba zderzacze odbijają kulę
+ze współczynnikiem $\lambda_{\text{przeciwnik}}$. Interfejs \klasa{IGetDamage} implementuje
+komponent \klasa{BallGetDamage}, który publikuje wartość obrażeń w~strumieniu R3. Strumień
+ten subskrybuje model zdrowia \klasa{HealthBarModel}, delegujący reguły do klasy
+\klasa{HealthStorage} (listing~\ref{lst:zdrowie}).
+
+\begin{lstlisting}[caption={Przechowywanie punktów życia w~klasie HealthStorage; \zrodloWlasne},label=lst:zdrowie]
+public class HealthStorage
+{
+    private const int _minHealth = 0;
+    public Action Die;
+    public readonly int DefaultHealth;
+    public int Health { get; private set; }
+    public HealthStorage(int health)
+    {
+        Health        = health;
+        DefaultHealth = Health;
+    }
+    public void DecreaseHealth(int health)
+    {
+        Health -= health;
+        if (Health < _minHealth)
+        {
+            Health = _minHealth;
+            Die?.Invoke();
+        }
+    }
+    public bool IncreaseHealth(int health)
+    {
+        if (Health >= DefaultHealth) return false;
+        Health = Math.Min(Health + health, DefaultHealth);
+        return true;
+    }
+}
+\end{lstlisting}
+
+Metoda \kod{IncreaseHealth} zwraca informację, czy leczenie zostało wykonane. Korzysta
+z~niej apteczka: jeśli kula ma pełne zdrowie, apteczka pozostaje na planszy, w~przeciwnym
+razie wyłącza swój zderzacz i~znika z~tą samą animacją co moneta. Zdarzenie \kod{Die}
+modelu zdrowia jest przekazywane dalej jako strumień \kod{Subject<Unit>}; subskrybują go
+komponent \klasa{BallDestroyer}, który dezaktywuje kulę i~publikuje zdarzenie zniszczenia
+kuli, oraz licznik czasu, który zatrzymuje pomiar. Zdarzenie zniszczenia kuli powoduje
+wyświetlenie okna końca poziomu (rysunek~\ref{rys:obrazenia}).
+
+\begin{figure}[!htb]
+  \centering
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \zrzut[\textwidth]{poziom2_obrazenia}\\[2pt]
+    {\small a)}
+  \end{minipage}\hfill
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \zrzut[\textwidth]{poziom2_przegrana}\\[2pt]
+    {\small b)}
+  \end{minipage}
+  \caption{Drugi poziom: a) stan interfejsu po dwóch kolizjach z~kaktusem, b) okno końca
+    poziomu po utracie zdrowia; \zrodloWlasne}
+  \label{rys:obrazenia}
+\end{figure}
+
+\section{Monety i warunek ukończenia poziomu}
+\label{sec:monety}
+
+Monety nie są umieszczane w~scenie bezpośrednio. Projektant poziomu rozmieszcza puste
+punkty startowe jako obiekty potomne znacznika \klasa{AllCoinsMarker}, a~fabryka monet
+tworzy dla każdego z~nich monetę przez kontener (listing~\ref{lst:monety}). Fabryka
+przechowuje monety na stosie, z~którego zdejmuje je przy rozmieszczaniu na planszy,
+a~każda zebrana moneta wraca na stos po zakończeniu animacji znikania. Gdy liczba monet
+na stosie ponownie zrówna się z~liczbą punktów startowych, wszystkie monety zostały
+zebrane i~fabryka publikuje zdarzenie \kod{LastCoinCollected}. Rozwiązanie to nie wymaga
+osobnego licznika ani przeszukiwania sceny.
+
+\begin{lstlisting}[caption={Fragment fabryki monet; \zrodloWlasne},label=lst:monety]
+private void FillCoins(Stack<CoinTransform> coins)
+{
+    foreach (CoinTransform _ in coins)
+    {
+        GameObject coin = InstantiateCoin();   // DiContainer.InstantiatePrefab
+        _coins.Push(coin);
+        SubscribeOnDestroying(coin.GetComponent<CoinDestroyer>());
+    }
+}
+private void SubscribeOnDestroying(CoinDestroyer coinDestroyer)
+{
+    _coinsDestroyed.Push(coinDestroyer.CoinDestroyed.Subscribe(PushCoin));
+}
+private void PushCoin(GameObject coin)
+{
+    _coins.Push(coin);
+    if (_coins.Count == _maxCoinsNumber) LastCoinCollected.OnNext(Unit.Default);
+}
+public void Dispose()
+{
+    while (!_coinsDestroyed.IsEmpty()) _coinsDestroyed.Pop().Dispose();
+}
+\end{lstlisting}
+
+Pojedyncza moneta składa się z~kilku niezależnych komponentów: \klasa{CoinRotation}
+obraca ją o~2° na krok fizyki, \klasa{CoinMovement} unosi ją i~opuszcza o~0,2~m,
+\klasa{CoinValue} przechowuje wartość z~konfiguracji, a~\klasa{CoinTrigger} wykrywa
+wjazd kuli. Wyzwalacz publikuje wartość monety w~strumieniu \kod{UpdateStorage} i~blokuje
+ponowne zebranie. Fabryka rejestruje w~kontenerze zbiór strumieni wszystkich monet
+(\klasa{CoinTriggersSubjects}), który subskrybują licznik monet w~interfejsie i~moduł
+statystyk. Pełny łańcuch zdarzeń od zebrania monety do okna końca poziomu przedstawiono
+na rysunku~\ref{rys:lancuch}, a~wszystkie strumienie reaktywne użyte w~grze zestawiono
+w~tabeli~\ref{tab:strumienie}.
+
+\begin{figure}[!htb]
+  \centering
+  \begin{tikzpicture}[diag]
+    \node[modul, minimum width=2.45cm] (trig) at (0,0) {CoinTrigger\\ \kod{OnTriggerEnter}};
+    \node[akcent, minimum width=2.45cm] (destr) at (3.75,0) {CoinDestroyerLogic\\ animacja (UniTask)};
+    \node[akcent, minimum width=2.45cm] (fact) at (7.5,0) {CoinsFactory\\ \kod{PushCoin}};
+    \node[akcent, minimum width=2.45cm] (fin) at (11.25,0) {FinishEnablerLogic\\ meta aktywna};
+    \node[modul, minimum width=2.45cm] (ui) at (0,-1.7) {CoinsModel\\ licznik monet};
+    \node[modul, minimum width=2.45cm] (stat) at (3.75,-1.7) {LevelStatisticsRecorder\\ maks. monet};
+    \node[akcent, minimum width=2.45cm] (timer) at (7.5,-1.7) {LevelTimer\\ zapis wyniku};
+    \node[modul, minimum width=2.45cm] (ftrig) at (11.25,-1.7) {FinishTrigger\\ wjazd na metę};
+    \node[modul, minimum width=2.45cm] (window) at (3.75,-3.3) {FinishWindowShower\\ okno końca};
+    \node[modul, minimum width=2.45cm] (destroy) at (7.5,-3.3) {BallDestroyer\\ kula nieaktywna};
+    \draw[strz] (trig) -- node[above, font=\scriptsize]{Action} (destr);
+    \draw[strz] (destr) -- node[above, font=\scriptsize]{Subject} (fact);
+    \draw[strz] (fact) -- node[above, font=\scriptsize]{Subject} (fin);
+    \draw[strz] (trig) -- node[left, font=\scriptsize]{Subject<int>} (ui);
+    \draw[strz] (trig.south east) -- (stat.north west);
+    \draw[strzp] (fin) -- node[right, font=\scriptsize]{wjazd kuli} (ftrig);
+    \draw[strz] (ftrig) -- node[above, font=\scriptsize]{1} (timer);
+    \draw[strz] (ftrig.south) |- node[pos=0.75, below, font=\scriptsize]{2} (destroy.east);
+    \draw[strz] (destroy) -- (window);
+  \end{tikzpicture}
+  \caption{Łańcuch zdarzeń od zebrania monety do wyświetlenia okna końca poziomu; liczby
+    oznaczają kolejność powiadamiania subskrybentów; \zrodloWlasne}
+  \label{rys:lancuch}
+\end{figure}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Strumienie reaktywne R3 wykorzystywane w~grze; \zrodloWlasne}
+  \label{tab:strumienie}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{6.15cm} >{\raggedright\arraybackslash}p{5.25cm} X}
+    \toprule
+    \textbf{Strumień} & \textbf{Typ} & \textbf{Odbiorcy} \\
+    \midrule
+    \texttt{CoinTrigger.UpdateStorage} & \texttt{Subject<int>} & licznik monet, statystyki \\
+    \texttt{CoinDestroyer.CoinDestroyed} & \texttt{Subject<GameObject>} & fabryka monet \\
+    \texttt{CoinsFactory.LastCoinCollected} & \texttt{Subject<Unit>} & aktywacja mety \\
+    \texttt{FinishTrigger.BallCollidedFinished} & \texttt{Subject<Unit>} & licznik czasu, kula \\
+    \texttt{BallGetDamage.SendDamage} & \texttt{Subject<int>} & model zdrowia \\
+    \texttt{HealthBarModel.Die} & \texttt{Subject<Unit>} & kula, licznik czasu \\
+    \texttt{BallDestroyer.BallDestroyed} & \texttt{Subject<Unit>} & okno końca poziomu \\
+    \texttt{PushingPowerChanged} & \texttt{Subject<float>} & nadajnik prędkości \\
+    \texttt{BallSpeedSender.Speed} & \texttt{ReactiveProperty<float>} & panel prędkości \\
+    \texttt{MeshRotation} & \texttt{ReactiveProperty<float>} & panel kąta \\
+    \texttt{LevelTimerLogic.Result} & \texttt{ReactiveProperty<LevelResult>} & wynik w~oknie końca \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Kolejność powiadomień ma tu znaczenie. Licznik czasu subskrybuje zdarzenie dotarcia do
+mety już w~metodzie wstrzykiwania, a~komponent \klasa{BallDestroyer} dopiero
+w~\kod{Start}. Ponieważ \klasa{Subject} powiadamia obserwatorów w~kolejności subskrypcji,
+wynik poziomu jest zapisany, zanim kula zostanie dezaktywowana i~zanim okno końca poziomu
+odczyta czas przejścia.
+
+\section{Efekty cząsteczkowe i pula obiektów}
+
+Każde odbicie kuli od ściany wyświetla w~punkcie styku krótki efekt pyłu oparty na
+systemie cząsteczek. Tworzenie nowego obiektu efektu przy każdym odbiciu i~niszczenie go
+po zakończeniu animacji powodowałoby ciągłe alokacje pamięci, dlatego zastosowano pulę
+obiektów \cite{nystrom-pool} (listing~\ref{lst:pula}). Fabryka efektów przy starcie poziomu tworzy siedem
+nieaktywnych egzemplarzy i~subskrybuje zdarzenie odbicia każdej ściany. Przy odbiciu
+zdejmuje efekt ze stosu, aktywuje go i~ustawia w~punkcie styku zgodnie z~wektorem
+normalnym. Po zakończeniu emisji Unity wywołuje metodę \kod{OnParticleSystemStopped}
+komponentu efektu, który zgłasza to fabryce i~dezaktywuje się, a~fabryka odkłada go
+z~powrotem na stos.
+
+\begin{lstlisting}[caption={Pula efektów cząsteczkowych w~klasie DustEffectsFactory; \zrodloWlasne},label=lst:pula]
+private const int _maxNumberOfDustEffects = 7;
+private void Pop(Vector3 position, Vector3 normal)
+{
+    DustEffect dustEffect = _dustEffects.Pop();
+    dustEffect.gameObject.SetActive(true);
+    dustEffect.transform.position = position;
+    dustEffect.transform.rotation = Quaternion.LookRotation(normal);
+}
+private DustEffect InstantiateDustEffect()
+{
+    DustEffect dustEffect = _diContainer.InstantiatePrefabForComponent<DustEffect>
+        (_coinPrefab, Vector3.zero, Quaternion.identity, null);
+    dustEffect.DustEffectStopped += PushDustEffect;
+    dustEffect.gameObject.SetActive(false);
+    return dustEffect;
+}
+private void FillDustEffectsStack()
+{
+    for (int i = 0; i < _maxNumberOfDustEffects; ++i) _dustEffects.Push(InstantiateDustEffect());
+}
+\end{lstlisting}
+
+W~ten sposób w~trakcie rozgrywki nie powstaje ani nie jest niszczony żaden obiekt efektu,
+a~liczba jednocześnie widocznych efektów jest ograniczona rozmiarem puli. Podobną rolę
+pełni stos monet w~fabryce monet: monety są tworzone raz, przy wczytaniu poziomu,
+a~zebrana moneta jest jedynie dezaktywowana.
+
+\section{Interfejs użytkownika w architekturze MVVM}
+
+Każdy element interfejsu, który wyświetla zmieniające się dane, jest zbudowany z~trzech
+klas: modelu, modelu widoku i~widoku. Obiekty te tworzy komponent \klasa{MonoBehaviour}
+dołączony do elementu interfejsu, który otrzymuje zależności przez wstrzykiwanie
+i~zwalnia obiekty w~odwrotnej kolejności w~metodzie \kod{OnDestroy}. Dla panelu prędkości
+i~kąta obrotu kuli przygotowano generyczne klasy bazowe (listing~\ref{lst:mvvm}): model
+przepisuje wartość ze źródła, model widoku formatuje ją z~etykietą i~zaokrągleniem do
+jednego miejsca po przecinku, a~widok ustawia tekst komponentu TextMeshPro. Konkretne
+panele różnią się jedynie etykietą i~źródłem danych.
+
+\begin{lstlisting}[caption={Generyczny model widoku i~widok panelu informacyjnego; \zrodloWlasne},label=lst:mvvm]
+public abstract class AbstractViewModel : IDisposable
+{
+    public readonly ReactiveProperty<string> Text;
+    private readonly string _standardTextPart;
+    private readonly IDisposable _changeText;
+    protected AbstractViewModel(ReactiveProperty<float> data, string standardTextPart)
+    {
+        _standardTextPart = standardTextPart;
+        Text = new("");
+        _changeText = data.Subscribe(ChangeText);
+    }
+    public void Dispose() => _changeText.Dispose();
+    private void ChangeText(float data)
+    {
+        if (Text.Value == data.ToString()) return;
+        Text.Value = _standardTextPart + " " + (float) Math.Round(value: data, digits: 1);
+    }
+}
+public abstract class AbstractView : IDisposable
+{
+    private readonly TMP_Text _text;
+    private readonly IDisposable _updateView;
+    protected AbstractView(TMP_Text text, ReactiveProperty<string> textChanger)
+    {
+        _text = text;
+        _updateView = textChanger.Subscribe(UpdateText);
+    }
+    private void UpdateText(string text) => _text.text = text;
+    public void Dispose() => _updateView.Dispose();
+}
+\end{lstlisting}
+
+Licznik monet ilustruje logikę prezentacji, której nie da się umieścić w~samym widoku.
+Model subskrybuje strumienie wszystkich monet i~sumuje ich wartości. Model widoku nie
+ustawia od razu nowej sumy, lecz zwiększa wyświetlaną liczbę o~jeden co 0,05~s
+(listing~\ref{lst:licznik}), publikując przy każdym kroku zdarzenie, na które widok
+reaguje pulsowaniem rozmiaru czcionki. Pasek zdrowia ma dwie pary model widoku--widok
+korzystające z~tego samego modelu: dla suwaka i~dla liczby punktów życia.
+
+\begin{lstlisting}[caption={Stopniowa zmiana licznika monet w~modelu widoku; \zrodloWlasne},label=lst:licznik]
+public async UniTaskVoid Change(int target)
+{
+    int current = int.Parse(_coinsText.Value);
+    if (current >= target) return;
+    int k = current < target ? 1 : -1;
+    while (current != target)
+    {
+        current += k;
+        _coinsText.Value = current.ToString();
+        PulsateText.OnNext(Unit.Default);
+        await UniTask.WaitForSeconds(_changeSpeed);
+    }
+    FinishedTextPulsation.OnNext(Unit.Default);
+}
+\end{lstlisting}
+
+\section{Animacje realizowane asynchronicznie}
+
+Animacja odbicia kuli łączy trzy efekty: zmianę koloru na czerwony oraz, przy zderzeniu ze
+ścianą, zgniecenie i~rozciągnięcie kuli. Każdy efekt implementuje interfejs
+\klasa{IBallAnimation} z~metodą wykonującą jeden krok animacji i~metodą przywracającą stan
+początkowy. Klasa \klasa{AnimationPlayer} wywołuje krok animacji w~każdym kroku fizyki
+przez zadany czas, oczekując na \kod{UniTask.WaitForFixedUpdate}. Listing~\ref{lst:animacja}
+pokazuje, jak z~tych elementów złożono sekwencję: zmiana koloru trwa 0,2~s i~przebiega
+równolegle do dwóch następujących po sobie faz zgniatania i~rozciągania, trwających po
+0,1~s. Szybkość deformacji jest proporcjonalna do prędkości kuli.
+
+\begin{lstlisting}[caption={Sekwencja animacji odbicia w~klasie BounceAnimationLogic; \zrodloWlasne},label=lst:animacja]
+private async UniTaskVoid PlayBounceAnimation(GameObject gameObject)
+{
+    CancellationTokenSource cancellationTokenSource = new ();
+    UniTask turningRedTask = _animationPlayer.PlayAnimation
+        (_ballTurningRedAnimation, _animationDuration, cancellationTokenSource.Token);
+    bool collidedObjectIsWall = IsWall(gameObject);
+    if (collidedObjectIsWall)
+    {
+        await _animationPlayer.PlayAnimation
+            (_ballSqueezingAnimation, HalfAnimationDuration, cancellationTokenSource.Token);
+        await _animationPlayer.PlayAnimation
+            (_ballExtendingAnimation, HalfAnimationDuration, cancellationTokenSource.Token);
+    }
+    await turningRedTask;
+    // ... przywrócenie początkowej skali i koloru kuli
+    cancellationTokenSource.Dispose();
+}
+\end{lstlisting}
+
+Ta sama technika posłużyła do zmniejszania zebranych monet i~apteczek, odmierzania czasu
+animacji śmierci przeciwnika oraz wypełniania paska ładowania. Kod animacji jest zwykłą
+metodą asynchroniczną zapisaną liniowo, bez korutyn i~ręcznego przechowywania stanu.
+
+\section{Kamera i minimapa}
+
+Kamera główna jest sterowana przez wirtualną kamerę pakietu Cinemachine \cite{cinemachine},
+której cel śledzenia ustawia komponent \klasa{MainCamera} po otrzymaniu znacznika kuli
+z~kontenera. Minimapa korzysta z~drugiej kamery, tworzonej w~kodzie przez klasę
+\klasa{MinimapCamera}. Jest to kamera ortograficzna obejmująca obszar 28~$\times$~28~m
+(parametr \kod{orthographicSize}, czyli połowa wysokości widoku, wynosi 14~m), umieszczona
+40~m nad kulą i~skierowana pionowo w~dół. Renderuje ona obraz do tekstury
+256~$\times$~256 pikseli wyświetlanej w~komponencie \klasa{RawImage}. W~każdej klatce kamera minimapy jest
+przesuwana nad kulę i~obracana o~ten sam kąt odchylenia co kamera główna, więc góra
+minimapy odpowiada kierunkowi, w~którym patrzy gracz.
+
+Kolorowe znaczniki kuli, przeciwników, apteczek i~mety leżą w~osobnej warstwie
+\kod{Minimap}, usuwanej z~maski kamery głównej. Komponent \klasa{MinimapIcon} utrzymuje
+znacznik poziomo nad właścicielem i~kompensuje jego skalę, a~znacznik przeciwnika znika
+razem z~nim, ponieważ jest jego obiektem potomnym.
+
+\section{Pomiar czasu i statystyki rozgrywki}
+
+Czas przejścia poziomu mierzy klasa \klasa{LevelTimerLogic} (listing~\ref{lst:czas}),
+której metoda \kod{Tick} jest wywoływana co klatkę przez komponent licznika. Dotarcie do
+mety wywołuje metodę \kod{Finish}, która zatrzymuje pomiar, porównuje wynik
+z~najlepszym zapisanym czasem, zapisuje statystyki i~publikuje wynik we~właściwości
+reaktywnej. Utrata zdrowia jedynie zatrzymuje pomiar. Czas jest formatowany jako
+\kod{mm:ss.cc} na podstawie liczby pełnych setnych sekundy, co eliminuje błędne wartości
+typu \kod{00:60.00} powstające przy zaokrąglaniu i~uniezależnia zapis od ustawień
+regionalnych telefonu.
+
+\begin{lstlisting}[caption={Zakończenie pomiaru czasu w~klasie LevelTimerLogic; \zrodloWlasne},label=lst:czas]
+public void Finish()
+{
+    if (!IsRunning) return;
+    Stop();
+    bool isNewBest = !_levelStatistics.TryGetBestTime(out float bestTime) || Elapsed < bestTime;
+    if (isNewBest)
+    {
+        bestTime = Elapsed;
+        _levelStatistics.SaveBestTime(bestTime);
+    }
+    _levelStatistics.MarkCompleted();
+    _levelStatistics.Save();
+    Result.Value = new LevelResult(Elapsed, bestTime, isNewBest);
+}
+\end{lstlisting}
+
+Wyniki są przechowywane w~mechanizmie \klasa{PlayerPrefs} \cite{unity-playerprefs}, który
+na Androidzie zapisuje dane w~pliku preferencji aplikacji, a~w~edytorze w~rejestrze
+systemu Windows. Klasa \klasa{LevelStatistics} buduje klucze z~nazwy poziomu
+(tabela~\ref{tab:klucze}), dzięki czemu dodanie nowego poziomu nie wymaga zmian w~kodzie.
+Łączny czas gry zapisuje komponent \klasa{LevelStatisticsRecorder} przy opuszczeniu
+poziomu oraz przy przejściu aplikacji w~tło, ponieważ system Android może zakończyć
+proces aplikacji działającej w~tle bez wywołania metod zamykających.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Klucze statystyk zapisywanych w~PlayerPrefs; \zrodloWlasne}
+  \label{tab:klucze}
+  \begin{tabular}{l l l}
+    \toprule
+    \textbf{Klucz} & \textbf{Typ} & \textbf{Znaczenie} \\
+    \midrule
+    \kod{Best Time <poziom>} & \kod{float} & najlepszy czas przejścia [s] \\
+    \kod{Time Played <poziom>} & \kod{float} & łączny czas spędzony na poziomie [s] \\
+    \kod{Max Coins <poziom>} & \kod{int} & najwięcej monet zebranych w~jednym podejściu \\
+    \kod{Completed <poziom>} & \kod{int} & 1, jeśli poziom został ukończony \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!htb]
+  \centering
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \zrzut[\textwidth]{poziom1_wygrana}\\[2pt]
+    {\small a)}
+  \end{minipage}\hfill
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \zrzut[\textwidth]{menu_statystyki}\\[2pt]
+    {\small b)}
+  \end{minipage}
+  \caption{a) Okno końca poziomu po dotarciu do mety z~czasem przejścia, b) okno statystyk
+    w~menu głównym przed rozegraniem poziomów; \zrodloWlasne}
+  \label{rys:wyniki}
+\end{figure}
+
+Okno statystyk w~menu (rysunek~\ref{rys:wyniki}b) odczytuje te same klucze przy każdym
+otwarciu. Okno końca poziomu jest wspólne dla wygranej i~przegranej; panel z~czasem
+przejścia jest w~nim widoczny tylko wtedy, gdy wynik poziomu został opublikowany, czyli
+po dotarciu do mety (rysunek~\ref{rys:wyniki}a).
+
+\section{Przepływ scen, usługi zewnętrzne i budowanie wersji Android}
+
+Przejścia pomiędzy scenami realizuje komponent \klasa{SceneLoader}. W~edytorze scena
+docelowa jest wybierana w~inspektorze jako zasób typu \klasa{SceneAsset}, a~metoda
+\kod{OnValidate} zapisuje jej nazwę w~polu serializowanym. W~wersji zbudowanej typ
+\klasa{SceneAsset} nie istnieje, więc wykorzystywana jest wyłącznie zapisana nazwa.
+Rozwiązuje to częsty problem literówek w~nazwach scen wpisywanych ręcznie. Przycisk
+poziomu w~menu zapisuje nazwę poziomu w~obiekcie \klasa{LoadLevel} z~kontekstu projektu
+i~wczytuje scenę ładowania, która losuje czas oczekiwania od 1 do 3~s, wypełnia pasek
+postępu i~wczytuje zapisany poziom (rysunek~\ref{rys:menu}).
+
+\begin{figure}[!htb]
+  \centering
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \zrzut[\textwidth]{menu_glowne}\\[2pt]
+    {\small a)}
+  \end{minipage}\hfill
+  \begin{minipage}{0.49\textwidth}
+    \centering
+    \zrzut[\textwidth]{ekran_ladowania}\\[2pt]
+    {\small b)}
+  \end{minipage}
+  \caption{a) Menu główne z~przyciskami poziomów i~odbijającą się piłką w~tle, b) ekran
+    ładowania poziomu; \zrodloWlasne}
+  \label{rys:menu}
+\end{figure}
+
+Scena rozruchowa zawiera komponent \klasa{FirebaseInitializer}, który wywołuje
+asynchroniczną metodę \kod{FirebaseApp.CheckAndFixDependenciesAsync}, a~wynik obsługuje
+w~wątku głównym; brak wymaganych zależności jest rejestrowany w~dzienniku i~nie przerywa
+działania gry \cite{firebase-unity}. Obiekt inicjalizujący nie jest niszczony przy zmianie
+sceny. Przygotowano również klasę \klasa{RewardedAd}, która inicjalizuje SDK Appodeal dla
+reklam z~nagrodą i~implementuje interfejs zdarzeń reklamy \cite{appodeal}. Klasa ta nie
+została jeszcze podłączona do żadnej sceny, a~sposób nagradzania gracza pozostaje
+elementem dalszego rozwoju.
+
+Budowanie wersji na Androida zautomatyzowano w~skrypcie edytora \klasa{AndroidBuild}.
+Metoda \kod{BuildApk} przełącza platformę docelową, ustawia zaplecze IL2CPP i~architektury
+ARMv7 oraz ARM64, po czym buduje plik APK ze wszystkich włączonych scen. Klasa implementuje
+też interfejs \klasa{IPreprocessBuildWithReport}, więc przed każdym budowaniem sprawdza,
+czy sceny istnieją, przygotowuje lokalne repozytorium Maven z~bibliotekami Firebase
+i~waliduje wszystkie pliki konfiguracyjne (listing~\ref{lst:walidacja}). Walidacja
+wyszukuje przez refleksję wszystkie klasy dziedziczące po
+\klasa{AbstractConfiguration<T>} i~wywołuje ich metodę \kod{Load}, więc brak pliku,
+sekcji lub wartości przerywa budowanie, zamiast ujawnić się dopiero na telefonie.
+
+\begin{lstlisting}[caption={Walidacja plików konfiguracyjnych przed budowaniem; \zrodloWlasne},label=lst:walidacja]
+private static void ValidateConfigurations()
+{
+    // Instantiate every JSON configuration so missing sections, resources or values fail before building.
+    foreach (Type type in typeof(BallMovementConfiguration).Assembly.GetTypes()
+                 .Where(t => !t.IsAbstract && t.BaseType != null && t.BaseType.IsGenericType &&
+                             t.BaseType.GetGenericTypeDefinition() == typeof(AbstractConfiguration<>)))
+    {
+        object configuration = Activator.CreateInstance(type);
+        try
+        {
+            type.GetMethod("Load").Invoke(configuration, null);
+        }
+        catch (Exception exception)
+        {
+            throw new BuildFailedException($"Invalid configuration {type.Name}: {exception.GetBaseException().Message}");
+        }
+    }
+}
+\end{lstlisting}
+
+Skrypt PowerShell \sciezka{Build-Android.ps1} kopiuje katalogi \kod{Assets},
+\kod{Packages} i~\kod{ProjectSettings} do osobnego katalogu roboczego i~uruchamia
+w~nim edytor w~trybie wsadowym z~metodą \kod{BuildApk}. Dzięki temu budowanie nie blokuje
+projektu otwartego w~edytorze. Zbudowany plik APK ma rozmiar 174,8~MB. Po rozpakowaniu
+największą część zajmują biblioteki natywne dla architektur ARM64 (97,7~MB, w~tym
+71,7~MB kodu gry i~bibliotek przetłumaczonego przez IL2CPP) i~ARMv7 (79,8~MB) oraz
+11~plików DEX o~łącznym rozmiarze 91,1~MB z~kodem bibliotek Androida dołączanych przez
+wtyczki Appodeal i~Firebase. Zasoby gry zajmują 20,7~MB.

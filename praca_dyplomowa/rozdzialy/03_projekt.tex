@@ -1,0 +1,333 @@
+% ============================================================================
+%  Rozdział 3. Analiza wymagań i projekt gry
+% ============================================================================
+\chapter{Analiza wymagań i projekt gry}
+\label{rozdz:projekt}
+
+W~rozdziale przedstawiono koncepcję rozgrywki wraz z~zestawieniem elementów występujących
+na planszach, wymagania funkcjonalne i~niefunkcjonalne, środowisko pracy i~ograniczenia,
+przypadki użycia oraz projekt architektury oprogramowania.
+
+\section{Koncepcja gry i zasady rozgrywki}
+
+Gracz steruje kulą umieszczoną na płaskiej planszy otoczonej ścianami. Kamera śledzi kulę
+z~góry i~z~tyłu, pod stałym kątem, dzięki czemu widoczny jest fragment planszy wokół kuli,
+a~pełny układ poziomu pokazuje minimapa w~prawym górnym rogu ekranu. Strzał wykonuje się,
+dotykając kuli i~przeciągając palec (lub kursor myszy) w~stronę przeciwną do zamierzonego
+kierunku ruchu. W~trakcie przeciągania od kuli do palca rysowana jest linia celownicza,
+a~po zwolnieniu kula rusza z~mocą proporcjonalną do długości gestu. Kolejny strzał można
+wykonać w~dowolnym momencie, także gdy kula jeszcze się toczy.
+
+Na każdym poziomie rozmieszczono monety. Po zebraniu ostatniej z~nich pojawia się meta,
+a~wjechanie w~nią kończy poziom wygraną. Kula ma 100~punktów życia. Zderzenie z~kaktusem
+odbiera 29, a~z~grzybem 17 punktów; spadek zdrowia poniżej zera oznacza przegraną.
+Przeciwnika można też pokonać, trafiając w~jego wrażliwą część, co uruchamia animację
+śmierci i~usuwa go z~planszy. Utracone zdrowie można odzyskać, zbierając apteczki,
+które przywracają 30~punktów, ale nie więcej niż do wartości początkowej. Apteczka
+pozostaje na planszy, jeśli kula przejedzie przez nią z~pełnym zdrowiem. Pozostałe elementy
+rozgrywki zestawiono w~tabeli~\ref{tab:elementy}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Elementy rozgrywki i~ich parametry; \zrodloWlasne}
+  \label{tab:elementy}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.3cm} X >{\raggedright\arraybackslash}p{3.6cm}}
+    \toprule
+    \textbf{Element} & \textbf{Działanie} & \textbf{Parametry} \\
+    \midrule
+    Kula & porusza się po strzale, traci moc przez tarcie & moc maks. 25, tarcie 4/s \\
+    Ściana & odbija kulę zgodnie z~prawem odbicia & zachowane 70\% mocy \\
+    Moneta & dodaje wartość do licznika, odblokowuje metę & wartość 20 \\
+    Kaktus & patroluje odcinek pomiędzy dwoma punktami & 29 obrażeń, prędkość 3 \\
+    Grzyb & nieruchomy, losowo obrócony & 17 obrażeń \\
+    Apteczka & przywraca zdrowie, maks. do 100 & +30 punktów \\
+    Pole przyspieszające & wyrzuca kulę wzdłuż strzałek & +20, prędkość maks. 35 \\
+    Odbijacz & odpycha kulę od swojego środka & +12, prędkość maks. 30 \\
+    Obracająca się belka & obraca się wokół słupka w~losowym kierunku & 90°/s, odepchnięcie 10 \\
+    Ruchoma ściana & przesuwa się ruchem harmonicznym & amplituda 2,5, prędkość 2,5 \\
+    Wiatr & stale przesuwa kulę w~losowym kierunku & siła 0,3--0,8 \\
+    Przycisk \emph{Push} & wypycha stojącą kulę w~losowym kierunku & moc 8 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Przygotowano trzy poziomy. Ich zawartość odczytano z~plików scen i~przedstawiono
+w~tabeli~\ref{tab:poziomy}. Pierwszy poziom zawiera wyłącznie nieruchomych przeciwników
+(grzyby), drugi wyłącznie patrolujące kaktusy, a~trzeci łączy oba typy i~ma dwukrotnie
+więcej monet niż pierwszy. Każdy poziom zawiera też jedną metę i~jeden punkt startowy kuli.
+Układ pierwszego poziomu w~rzucie z~góry pokazano na rysunku~\ref{rys:poziom1-gora}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Liczba elementów na poszczególnych poziomach; \zrodloWlasne}
+  \label{tab:poziomy}
+  \begin{tabular}{l c c c}
+    \toprule
+    \textbf{Element} & \textbf{Poziom 1} & \textbf{Poziom 2} & \textbf{Poziom 3} \\
+    \midrule
+    Wymiary obszaru gry [m] & 76 $\times$ 104 & 104 $\times$ 80 & 108 $\times$ 87 \\
+    Segmenty ścian & 29 & 50 & 43 \\
+    Monety & 34 & 42 & 82 \\
+    Grzyby / kaktusy & 44 / 0 & 0 / 35 & 56 / 33 \\
+    Apteczki & 7 & 8 & 8 \\
+    Pola przyspieszające & 11 & 12 & 12 \\
+    Odbijacze & 11 & 13 & 14 \\
+    Obracające się belki & 5 & 6 & 6 \\
+    Ruchome ściany & 4 & 5 & 5 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!htb]
+  \centering
+  \zrzut[0.44\textwidth]{poziom1_widok_z_gory}
+  \caption{Rzut z~góry pierwszego poziomu wykonany kamerą ortograficzną. Kolorowe znaczniki
+    minimapy oznaczają: niebieski -- kulę, czerwone -- przeciwników, zielone -- apteczki;
+    różowe pierścienie to odbijacze, pomarańczowe prostokąty -- pola przyspieszające,
+    odcinki z~ciemnym punktem -- obracające się belki; \zrodloWlasne}
+  \label{rys:poziom1-gora}
+\end{figure}
+
+Na ekranie rozgrywki stale widoczne są licznik monet, czas przejścia poziomu, strzałka
+wiatru, minimapa, pasek i~liczba punktów życia, przycisk \emph{Push} oraz panel prędkości
+i~kąta obrotu kuli (rysunek~\ref{rys:hud-wstep}).
+
+\section{Wymagania funkcjonalne}
+
+Wymagania funkcjonalne określają działania, które gra musi umożliwiać graczowi, oraz
+reakcje systemu na zdarzenia rozgrywki:
+\begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
+  \item wybór jednego z~trzech poziomów w~menu głównym i~przejście do niego przez ekran
+        ładowania,
+  \item wykonanie strzału gestem przeciągnięcia rozpoczętym na kuli, z~podglądem kierunku
+        w~postaci linii celowniczej,
+  \item wyznaczanie mocy strzału na podstawie długości gestu z~ograniczeniem do wartości
+        maksymalnej,
+  \item odbijanie kuli od ścian i~przeciwników z~utratą części mocy oraz animacją
+        zderzenia i~efektem cząsteczkowym przy ścianie,
+  \item zbieranie monet i~aktualizacja licznika, a~po zebraniu wszystkich monet
+        udostępnienie mety,
+  \item zadawanie obrażeń przez przeciwników, odzyskiwanie zdrowia przez apteczki
+        i~zakończenie gry przegraną po utracie zdrowia,
+  \item działanie przeszkód ruchomych, pól przyspieszających, odbijaczy i~wiatru,
+  \item wypchnięcie nieruchomej kuli w~losowym kierunku przyciskiem \emph{Push},
+  \item wyświetlanie minimapy, kierunku wiatru, prędkości i~kąta obrotu kuli,
+  \item pomiar czasu przejścia poziomu, zapis najlepszego czasu, łącznego czasu gry
+        i~największej liczby zebranych monet,
+  \item prezentacja statystyk wszystkich poziomów w~oknie dostępnym z~menu głównego,
+  \item ponowne rozpoczęcie poziomu, powrót do menu oraz zamknięcie aplikacji.
+\end{itemize}
+
+\section{Wymagania niefunkcjonalne}
+
+Wymagania niefunkcjonalne dotyczą technologii, jakości kodu i~parametrów działania
+aplikacji:
+\begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
+  \item implementacja w~silniku Unity 2022.3 LTS w~języku C\#,
+  \item działanie na urządzeniach z~systemem Android w~wersji 9 (API~28) lub nowszej,
+        z~architekturą ARMv7 lub ARM64, oraz w~edytorze Unity w~systemie Windows,
+  \item obsługa wejścia z~ekranu dotykowego i~myszy przez jedną definicję akcji,
+  \item płynna rozgrywka; fizyka obliczana ze stałym krokiem 0{,}02~s niezależnie od
+        liczby klatek obrazu,
+  \item modułowa struktura kodu z~jawnymi zależnościami pomiędzy zestawami kompilacji,
+  \item dostarczanie zależności przez kontener Zenject zamiast wyszukiwania obiektów
+        w~scenie i~singletonów,
+  \item oddzielenie logiki rozgrywki od klas \klasa{MonoBehaviour},
+  \item przechowywanie parametrów rozgrywki w~plikach JSON, z~walidacją przed budowaniem,
+  \item ograniczenie tworzenia i~niszczenia obiektów w~trakcie rozgrywki,
+  \item zwalnianie wszystkich subskrypcji zdarzeń wraz z~obiektami, które je utworzyły,
+  \item czytelny interfejs w~orientacji poziomej, skalowany względem rozdzielczości
+        referencyjnej 800~$\times$~600.
+\end{itemize}
+
+\section{Ograniczenia systemowe i środowisko pracy}
+
+\subsection{Środowisko sprzętowe i programowe}
+
+Prace implementacyjne i~testy w~edytorze prowadzono na komputerze stacjonarnym
+z~procesorem AMD Ryzen~5 9600X, kartą graficzną AMD Radeon RX~9070~XT i~32~GB pamięci
+operacyjnej, pracującym pod kontrolą systemu Windows~11; dodatkowo grę uruchamiano na
+laptopie HP. Wykorzystano edytor Unity
+2022.3.60f1 z~modułami Android Build Support, Android SDK \& NDK Tools oraz OpenJDK,
+środowisko programistyczne JetBrains Rider oraz system kontroli wersji Git z~repozytorium
+w~serwisie GitHub. Biblioteki R3 i~ObservableCollections zainstalowano z~repozytorium
+NuGet za pomocą narzędzia NuGetForUnity \cite{nugetforunity}, a~UniTask jako pakiet
+menedżera pakietów Unity pobierany z~repozytorium Git. Zenject i~Appodeal dołączono
+w~postaci źródłowej w~katalogu \kod{Assets}, a~Firebase jako lokalne pakiety
+\kod{.tgz}.
+
+\subsection{Środowisko uruchomieniowe}
+
+Docelową platformą jest system Android. Wersja instalacyjna jest budowana z~zapleczem
+IL2CPP, które tłumaczy kod pośredni .NET na C++ i~kompiluje go do kodu natywnego
+\cite{unity-il2cpp}, dla architektur ARMv7 i~ARM64. Minimalny poziom API ustawiono na~28,
+co odpowiada systemowi Android~9 \cite{android-api}. Interfejs zaprojektowano dla
+orientacji poziomej, a~gra nie wymaga połączenia z~siecią.
+
+\subsection{Ograniczenia działania}
+
+Analiza przyjętych rozwiązań pozwoliła wskazać następujące ograniczenia:
+\begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
+  \item rozpoczęcie strzału wymaga trafienia palcem w~kulę, co na małym ekranie przy
+        dużej odległości kamery bywa trudne; łagodzi to przycisk \emph{Push},
+  \item wyniki są przechowywane lokalnie w~\klasa{PlayerPrefs}, więc odinstalowanie
+        aplikacji je usuwa i~nie są one synchronizowane pomiędzy urządzeniami,
+  \item poziomy są zaprojektowane ręcznie i~mają stałą liczbę elementów; losowe są jedynie
+        kierunek i~siła wiatru, kierunek obrotu belek oraz faza ruchu ścian,
+  \item gra nie zawiera warstwy dźwiękowej,
+  \item teksty interfejsu są dostępne wyłącznie w~języku angielskim.
+\end{itemize}
+
+\section{Przypadki użycia}
+
+Diagram przypadków użycia przedstawiony na rysunku~\ref{rys:pu} pokazuje funkcje gry
+z~perspektywy gracza. Jedynym aktorem jest gracz, a~reakcje gry na zdarzenia rozgrywki
+(zebranie monety, otrzymanie obrażeń, ukończenie poziomu) zostały ujęte jako przypadki
+rozszerzające przypadek wykonania strzału, ponieważ zachodzą wyłącznie w~jego następstwie.
+
+\begin{figure}[!htb]
+  \centering
+  \begin{tikzpicture}[diag]
+    \aktor{0,0}{Gracz}
+    \node[draw, thick, rounded corners, minimum width=11.4cm, minimum height=8.5cm,
+          anchor=west, label={[font=\footnotesize\bfseries]above:Ball Finisher}] (sys) at (1.3,0) {};
+    \node[przypadek, minimum width=3.6cm] (u1) at (4.2, 3.4) {Wybierz poziom};
+    \node[przypadek, minimum width=3.6cm] (u2) at (4.2, 2.27) {Przejrzyj statystyki};
+    \node[przypadek, minimum width=3.6cm] (u3) at (4.2, 1.13) {Wykonaj strzał};
+    \node[przypadek, minimum width=3.6cm] (u4) at (4.2, 0.0) {Wypchnij zablokowaną\\kulę};
+    \node[przypadek, minimum width=3.6cm] (u5) at (4.2,-1.13) {Zagraj ponownie};
+    \node[przypadek, minimum width=3.6cm] (u6) at (4.2,-2.27) {Wróć do menu};
+    \node[przypadek, minimum width=3.6cm] (u7) at (4.2,-3.4) {Wyjdź z~gry};
+    \node[przypadek, minimum width=3.3cm] (i1) at (9.7, 3.4) {Wczytaj poziom};
+    \node[przypadek, minimum width=3.3cm] (e1) at (9.7, 2.2) {Zbierz monetę};
+    \node[przypadek, minimum width=3.3cm] (e2) at (9.7, 1.0) {Otrzymaj obrażenia\\lub ulecz kulę};
+    \node[przypadek, minimum width=3.3cm] (e3) at (9.7,-0.2) {Ukończ poziom};
+    \foreach \u in {u1,u2,u3,u4,u5,u6,u7} \draw (0.35,0.1) -- (\u.west);
+    \draw[strzp] (e1.west) -- node[above, sloped, pos=0.32, font=\scriptsize]{«extend»} (u3.east);
+    \draw[strzp] (e2.west) -- node[above, pos=0.32, font=\scriptsize]{«extend»} (u3.east);
+    \draw[strzp] (e3.west) -- node[below, sloped, pos=0.32, font=\scriptsize]{«extend»} (u3.east);
+    \draw[strzp] (u1.east) -- node[above, font=\scriptsize]{«include»} (i1.west);
+    \draw[strzp] (u5.east) -- node[above, pos=0.6, font=\scriptsize]{«include»} (12.15,-1.13) |- (i1.east);
+  \end{tikzpicture}
+  \caption{Diagram przypadków użycia; \zrodloWlasne}
+  \label{rys:pu}
+\end{figure}
+
+\subsection{PU Wybierz poziom}
+
+Po uruchomieniu aplikacji i~zainicjalizowaniu usług wyświetlane jest menu główne
+z~przyciskami trzech poziomów, statystyk i~wyjścia. Wybór poziomu prowadzi przez ekran
+ładowania do poziomu, na którym kula pojawia się w~punkcie startowym, a~licznik czasu
+zaczyna odliczanie.
+
+\subsection{PU Wykonaj strzał}
+
+Gracz dotyka kuli i~przeciąga palec, a~gra wyświetla linię od kuli do punktu pod palcem.
+Po zwolnieniu gra wyznacza moc i~kierunek strzału; gest rozpoczęty poza kulą jest
+ignorowany. W~trakcie ruchu kuli gra realizuje przypadki rozszerzające:
+\begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
+  \item zebranie monety -- moneta znika z~animacją, licznik monet rośnie, a~po zebraniu
+        ostatniej monety pojawia się meta,
+  \item otrzymanie obrażeń lub uleczenie -- zmienia się pasek i~liczba punktów życia;
+        przy spadku zdrowia poniżej zera kula znika i~wyświetlane jest okno przegranej,
+  \item ukończenie poziomu -- wjechanie w~metę zatrzymuje licznik czasu, zapisuje wynik
+        i~wyświetla okno końca poziomu z~czasem przejścia.
+\end{itemize}
+
+\subsection{PU Wypchnij zablokowaną kulę}
+
+Kula zatrzymana przy ścianie, w~miejscu zasłoniętym dla kamery, może być niemożliwa do
+trafienia palcem. Przycisk \emph{Push} jest aktywny wyłącznie wtedy, gdy kula stoi.
+Jego naciśnięcie nadaje kuli niewielką prędkość w~losowym kierunku, co pozwala wydostać ją
+z~takiego położenia, ale nie daje przewagi w~trakcie normalnej gry.
+
+\subsection{PU Przejrzyj statystyki}
+
+Okno statystyk pokazuje dla każdego poziomu, czy został ukończony, łączny czas gry,
+najlepszy czas przejścia oraz największą liczbę monet zebranych w~jednym podejściu.
+
+\subsection{PU Zagraj ponownie, Wróć do menu i Wyjdź z gry}
+
+Okno końca poziomu, wyświetlane zarówno po wygranej, jak i~po przegranej, udostępnia
+przycisk ponownego wczytania bieżącego poziomu oraz przycisk powrotu do menu głównego.
+Opuszczenie poziomu w~dowolny sposób zapisuje czas spędzony na poziomie. Z~menu głównego
+gracz może zamknąć aplikację.
+
+\section{Projekt architektury oprogramowania}
+\label{sec:architektura}
+
+Architekturę zaprojektowano tak, aby każda mechanika gry była osobnym modułem, który
+otrzymuje zależności z~kontenera, komunikuje się z~innymi modułami przez zdarzenia
+i~nie zależy od sposobu, w~jaki zostały utworzone jego współpracujące obiekty. Przyjęto
+przy tym zasadę, zgodnie z~którą reguły gry nie zależą od szczegółów technicznych, takich
+jak sposób przechowywania konfiguracji czy tworzenia obiektów, lecz to warstwy techniczne
+zależą od reguł \cite{martin}. Podział na warstwy przedstawia
+rysunek~\ref{rys:architektura}.
+
+\begin{figure}[!htb]
+  \centering
+  \begin{tikzpicture}[diag]
+    \node[modul, minimum width=4.3cm, minimum height=13mm] (json) at (0,0) {\textbf{Konfiguracja}\\ pliki JSON w~Resources\\ \kod{AbstractConfiguration<T>}};
+    \node[akcent, minimum width=5.6cm, minimum height=13mm] (infra) at (7.7,0) {\textbf{Infrastruktura}\\ instalatory \kod{MonoInstaller}, bindery,\\ fabryki, \kod{DiContainer}};
+    \node[modul, minimum width=4.3cm, minimum height=13mm] (unity) at (0,-2.2) {\textbf{Silnik Unity}\\ PhysX, Input System,\\ URP, Cinemachine};
+    \node[akcent, minimum width=5.6cm, minimum height=13mm] (comp) at (7.7,-2.2) {\textbf{Komponenty}\\ klasy \kod{MonoBehaviour}\\ (adaptery zdarzeń silnika)};
+    \node[modul, minimum width=4.3cm, minimum height=13mm] (ui) at (0,-4.4) {\textbf{Interfejs (MVVM)}\\ Model, ViewModel, View};
+    \node[akcent, minimum width=5.6cm, minimum height=13mm] (logic) at (7.7,-4.4) {\textbf{Logika rozgrywki}\\ klasy \kod{*Logic}, \kod{HealthStorage},\\ \kod{PushPowerConverter}, \dots};
+    \node[modul, minimum width=5.6cm, minimum height=11mm] (ext) at (7.7,-6.5) {\textbf{Zapis i~usługi}\\ PlayerPrefs, Firebase, Appodeal};
+    \draw[strz] (json) -- node[above, font=\scriptsize]{obiekty danych} (infra);
+    \draw[strz] (infra) -- node[right, font=\scriptsize]{wstrzykiwanie \kod{[Inject]}} (comp);
+    \draw[strz] (unity) -- node[above, font=\scriptsize]{kolizje, wejście} (comp);
+    \draw[strz] (comp) -- node[right, font=\scriptsize]{tworzy, przekazuje zdarzenia} (logic);
+    \draw[strz] (logic) -- node[above, font=\scriptsize]{strumienie R3} (ui);
+    \draw[strz] (logic) -- node[right, font=\scriptsize]{statystyki poziomu} (ext);
+  \end{tikzpicture}
+  \caption{Warstwy architektury gry i~kierunki zależności; \zrodloWlasne}
+  \label{rys:architektura}
+\end{figure}
+
+\subsection{Warstwa infrastruktury}
+
+Warstwa infrastruktury jest korzeniem kompozycji aplikacji. Obiekt \klasa{SceneContext}
+każdego poziomu zawiera instalatory poszczególnych obszarów gry (kula, monety, przeciwnicy,
+podłoże i~przeszkody, ściany, efekty, linia celownicza, meta, interfejs), które rejestrują
+powiązania za pośrednictwem binderów. W~tej warstwie znajdują się też fabryki obiektów.
+
+\subsection{Warstwa konfiguracji}
+
+Parametry liczbowe rozgrywki są zapisane w~18~plikach JSON. Każdej sekcji pliku odpowiada
+klasa danych z~polami tylko do odczytu oraz klasa konfiguracji, która ją wczytuje.
+Instalatory przekazują obiekty danych do kontenera, więc żadna klasa rozgrywki nie
+odczytuje plików samodzielnie.
+
+\subsection{Warstwa komponentów i logiki}
+
+Komponenty \klasa{MonoBehaviour} odbierają zdarzenia silnika (kolizje, kroki fizyki,
+wejście) i~przekazują je do klas logiki, które nie dziedziczą po typach silnika,
+otrzymują zależności przez konstruktor i~implementują \klasa{IDisposable}, jeśli
+subskrybują zdarzenia. Cała reguła gry, np. sposób wyznaczania mocy strzału, znajduje się
+więc w~jednej klasie, którą można czytać bez znajomości sceny.
+
+\subsection{Przepływ scen}
+
+Aplikacja składa się ze~sześciu scen (rysunek~\ref{rys:sceny}). Ekran ładowania odczytuje
+nazwę poziomu z~obiektu \klasa{LoadLevel} kontekstu projektu, jedynego obiektu
+współdzielonego przez wszystkie sceny.
+
+\begin{figure}[!htb]
+  \centering
+  \begin{tikzpicture}[diag, node distance=5mm and 13mm]
+    \node[modul, minimum width=2.2cm] (boot) {\textbf{Bootstrap}\\ Firebase};
+    \node[akcent, minimum width=2.6cm, right=of boot] (menu) {\textbf{Main Menu}\\ wybór poziomu,\\ statystyki};
+    \node[modul, minimum width=2.2cm, right=of menu] (load) {\textbf{Loading}\\ pasek 1--3 s};
+    \node[akcent, minimum width=2.4cm, right=of load] (lvl) {\textbf{Level 1/2/3}\\ rozgrywka};
+    \node[modul, minimum width=2.0cm, below=9mm of menu, xshift=-6mm] (quit) {zamknięcie\\ aplikacji};
+    \draw[strz] (boot) -- (menu);
+    \draw[strz] (menu) -- node[above, font=\scriptsize]{poziom} (load);
+    \draw[strz] (load) -- (lvl);
+    \draw[strz] ([xshift=-6mm]menu.south) -- node[left, font=\scriptsize]{Quit} ([xshift=-6mm]menu.south |- quit.north);
+    \draw[strz] (lvl.south) -- ++(0,-7mm) -| node[pos=0.25, below, font=\scriptsize]{Main Menu} ([xshift=6mm]menu.south);
+    \draw[strz] ([xshift=-5mm]lvl.north) -- ++(0,5mm) -| node[pos=0.25, above, font=\scriptsize]{Retry} ([xshift=5mm]lvl.north);
+  \end{tikzpicture}
+  \caption{Sceny gry i~przejścia pomiędzy nimi; \zrodloWlasne}
+  \label{rys:sceny}
+\end{figure}

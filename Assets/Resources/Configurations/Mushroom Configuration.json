@@ -1,0 +1,12 @@
+﻿{
+    "Rotation": 
+    {
+        "MinAngle": 0,
+        "MaxAngle": 360
+    },
+    
+    "Damage":
+    {
+        "Damage": 17
+    }
+}

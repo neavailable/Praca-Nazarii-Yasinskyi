@@ -1,0 +1,23 @@
+﻿{
+    "Value":
+    {
+        "CoinValue": 20
+    },
+
+    "Movement":
+    {
+        "YSpeed" : 0.15,
+        "YBorder": 0.2
+    },
+
+    "Rotation":
+    {
+        "YRotation": 2.0
+    },
+
+    "Destroyer":
+    {
+        "ShrinkingSpeed": 2.0,
+        "MinScale"      : 0.05
+    }
+}

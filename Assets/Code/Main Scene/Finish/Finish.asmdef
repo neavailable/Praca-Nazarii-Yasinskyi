@@ -1,0 +1,18 @@
+{
+    "name": "Finish",
+    "rootNamespace": "",
+    "references": [
+        "GUID:18fba59aeae050e4c8aa6991ae6ef8a5",
+        "GUID:8c71d5428753e9b45819e47982e25be2",
+        "GUID:7fe701258c8242f469c73046d6e78a90"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

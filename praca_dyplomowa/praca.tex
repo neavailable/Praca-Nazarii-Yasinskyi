@@ -1,0 +1,52 @@
+% ============================================================================
+%  Praca dyplomowa inżynierska
+%  Projekt i implementacja zręcznościowej gry 3D z wykorzystaniem silnika Unity
+%  i technologii reaktywnych
+%  Autor: Nazarii Yasinskyi (nr albumu 280972)
+%  Kompilacja: pdflatex praca.tex (dwukrotnie, aby uzupełnić spisy i odwołania)
+% ============================================================================
+\documentclass[12pt,a4paper,twoside,openany]{report}
+
+\input{ustawienia}
+
+% --- Dane na stronę tytułową ------------------------------------------------
+\newcommand{\Uczelnia}{Politechnika Wrocławska}
+\newcommand{\Wydzial}{Wydział Informatyki i Telekomunikacji}
+\newcommand{\Kierunek}{Informatyka Techniczna (ITE)}
+\newcommand{\Specjalnosc}{Grafika i systemy multimedialne (IGM)}
+\newcommand{\TytulPracy}{Projekt i implementacja zręcznościowej gry 3D z~wykorzystaniem silnika Unity i~technologii reaktywnych}
+\newcommand{\Autor}{Nazarii Yasinskyi}
+\newcommand{\NrAlbumu}{280972}
+\newcommand{\Opiekun}{dr inż. arch. Tomasz Zamojski}
+\newcommand{\SlowaKluczowe}{Unity, C\#, gra zręcznościowa, programowanie reaktywne, R3, Zenject, MVVM}
+\newcommand{\RokPracy}{2026}
+
+\begin{document}
+
+\pagenumbering{gobble}
+\pagestyle{empty}
+
+\input{rozdzialy/00_strona_tytulowa}
+\input{rozdzialy/00_streszczenie}
+
+\begingroup
+\setstretch{1.12}
+\tableofcontents
+\endgroup
+\cleardoublepage
+
+\pagestyle{fancy}
+\pagenumbering{arabic}
+
+\input{rozdzialy/01_wstep}
+\input{rozdzialy/02_podstawy}
+\input{rozdzialy/03_projekt}
+\input{rozdzialy/04_implementacja}
+\input{rozdzialy/05_testy}
+\input{rozdzialy/06_zakonczenie}
+
+\input{rozdzialy/bibliografia}
+\input{rozdzialy/spisy}
+\input{rozdzialy/zalaczniki}
+
+\end{document}

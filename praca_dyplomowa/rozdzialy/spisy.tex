@@ -1,0 +1,22 @@
+% ============================================================================
+%  Spisy rysunków, tabel i listingów (jeden po drugim, bez łamania strony)
+% ============================================================================
+\clearpage
+\begingroup
+\small
+\setstretch{1.05}
+\phantomsection
+\addcontentsline{toc}{chapter}{Spis rysunków}
+\listoffigures
+
+\let\clearpage\relax
+\vspace{14pt}
+\phantomsection
+\addcontentsline{toc}{chapter}{Spis tabel}
+\listoftables
+
+\vspace{14pt}
+\phantomsection
+\addcontentsline{toc}{chapter}{Spis listingów}
+\lstlistoflistings
+\endgroup

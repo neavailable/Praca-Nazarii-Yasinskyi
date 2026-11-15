@@ -1,0 +1,18 @@
+{
+    "Movement":
+    {
+        "MaxPushingPower"  : 25.0, 
+        "PushPowerDecrease": 20.0
+    },
+    
+    "BounceAnimation":
+    {
+        "AnimationDuration"             : 0.2, 
+        "SqueezingExtendingSpeedDivider": 1.8,
+        "ColorChangeSpeed"              : 6.0,
+        "TargetColorR"                  : 218,
+        "TargetColorG"                  : 67,
+        "TargetColorB"                  : 67,
+        "TargetColorA"                  : 255
+    }
+}

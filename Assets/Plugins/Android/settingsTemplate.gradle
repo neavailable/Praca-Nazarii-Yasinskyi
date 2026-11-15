@@ -1,0 +1,50 @@
+pluginManagement {
+    repositories {
+        **ARTIFACTORYREPOSITORY**
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
+include ':launcher', ':unityLibrary'
+**INCLUDES**
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        **ARTIFACTORYREPOSITORY**
+        google()
+        mavenCentral()
+        maven {
+            url uri("**DIR_UNITYPROJECT**/Library/AndroidFirebaseRepository")
+            content { includeModule("com.google.firebase", "firebase-app-unity") }
+        }
+        maven {
+            url "https://artifact.bytedance.com/repository/pangle/"
+            content { includeGroup("com.pangle.global") }
+        }
+// Android Resolver Repos Start
+        def unityProjectPath = $/file:///**DIR_UNITYPROJECT**/$.replace("\\", "/")
+        maven {
+            url "https://artifactory.appodeal.com/appodeal" // Assets/Appodeal/Editor/NetworkConfigs/AppodealDependencies.xml:192
+        }
+        maven {
+            url "https://artifactory.bidmachine.io/bidmachine" // Assets/Appodeal/Editor/NetworkConfigs/AppodealDependencies.xml:192
+        }
+        maven {
+            url "https://artifactory.bidon.org/bidon" // Assets/Appodeal/Editor/NetworkConfigs/AppodealDependencies.xml:192
+        }
+        maven {
+            url "https://repo1.maven.org/maven2" // Assets/Appodeal/Editor/NetworkConfigs/AppodealDependencies.xml:192
+        }
+        maven {
+            url (unityProjectPath + "/Assets/GeneratedLocalRepo/Firebase/m2repository") // Assets/Firebase/Editor/AnalyticsDependencies.xml:18, Packages/com.google.firebase.app/Firebase/Editor/AppDependencies.xml:22
+        }
+        mavenLocal()
+// Android Resolver Repos End
+        flatDir {
+            dirs "${project(':unityLibrary').projectDir}/libs"
+        }
+    }
+}

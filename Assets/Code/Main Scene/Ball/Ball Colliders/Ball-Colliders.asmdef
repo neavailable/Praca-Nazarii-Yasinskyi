@@ -1,0 +1,16 @@
+{
+    "name": "Ball-Colliders",
+    "rootNamespace": "",
+    "references": [
+        "GUID:5042d858b46740b499cf81756942bef4"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

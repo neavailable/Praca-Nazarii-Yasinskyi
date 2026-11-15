@@ -1,0 +1,120 @@
+% ============================================================================
+%  Załączniki
+% ============================================================================
+\chapter*{Załączniki}
+\addcontentsline{toc}{chapter}{Załączniki}
+
+\section*{Załącznik A. Kod źródłowy i materiały dodatkowe}
+\addcontentsline{toc}{section}{Załącznik A. Kod źródłowy i materiały dodatkowe}
+
+Pełny kod źródłowy gry wraz z~projektem Unity (sceny, prefabrykaty, materiały, pliki
+konfiguracyjne) znajduje się w~dołączonym do pracy katalogu z~kodem źródłowym oraz
+w~repozytorium \url{https://github.com/neavailable/Praca-Nazarii-Yasinskyi} (kod gry:
+\kod{Assets/Code}, skrypty edytora: \kod{Assets/Editor}). Katalog \kod{praca\_dyplomowa}
+zawiera źródła pracy w~formacie \LaTeX, zrzuty ekranu oraz skrypt
+\sciezka{narzedzia/ThesisCapture.cs} realizujący scenariusz automatyczny opisany
+w~rozdziale~\ref{rozdz:testy}, przeznaczony do uruchamiania na kopii projektu.
+
+\section*{Załącznik B. Parametry rozgrywki zapisane w plikach konfiguracyjnych}
+\addcontentsline{toc}{section}{Załącznik B. Parametry rozgrywki zapisane w plikach konfiguracyjnych}
+
+Tabela zawiera wszystkie wartości zapisane w~plikach JSON w~katalogu
+\sciezka{Assets/Resources/Configurations}. Nagłówki grup podają nazwę pliku (bez przyrostka
+\kod{Configuration.json}) i~sekcję; każdej z~25 sekcji odpowiada jedna klasa konfiguracji.
+
+\newcommand{\grupa}[2]{\multicolumn{2}{@{}l}{\rule{0pt}{9pt}\textit{#1 -- #2}}\\}
+\begingroup
+\footnotesize
+\setstretch{1.0}
+\renewcommand{\arraystretch}{0.98}
+\noindent
+\begin{minipage}[t]{0.49\textwidth}
+\begin{tabular}[t]{@{}p{5.7cm}r@{}}
+\toprule
+\textbf{Parametr} & \textbf{Wartość}\\
+\midrule
+\grupa{Ball}{Movement}
+\hspace{0.3cm}\texttt{MaxPushingPower}, \texttt{PushPowerDecrease} & 25,0; 20,0\\
+\grupa{Ball}{BounceAnimation}
+\hspace{0.3cm}\texttt{AnimationDuration} & 0,2\\
+\hspace{0.3cm}\texttt{SqueezingExtendingSpeedDivider} & 1,8\\
+\hspace{0.3cm}\texttt{ColorChangeSpeed} & 6,0\\
+\multicolumn{2}{@{}l}{\hspace{0.3cm}\texttt{TargetColorR/G/B/A}: 218/67/67/255}\\
+\grupa{Ball Menu}{Movement}
+\hspace{0.3cm}\texttt{StartPushingPower} & 7,0\\
+\grupa{Boost Pad}{Boost Pad}
+\hspace{0.3cm}\texttt{BoostPower}, \texttt{MaxSpeed} & 20,0; 35,0\\
+\grupa{Cactus}{Movement / Damage}
+\hspace{0.3cm}\texttt{Speed}, \texttt{Damage} & 3; 29\\
+\grupa{Coin}{Value}
+\hspace{0.3cm}\texttt{CoinValue} & 20\\
+\grupa{Coin}{Movement / Rotation}
+\hspace{0.3cm}\texttt{YSpeed}, \texttt{YBorder} & 0,15; 0,2\\
+\hspace{0.3cm}\texttt{YRotation} & 2,0\\
+\grupa{Coin}{Destroyer}
+\hspace{0.3cm}\texttt{ShrinkingSpeed}, \texttt{MinScale} & 2,0; 0,05\\
+\grupa{Dust Effect}{Position}
+\hspace{0.3cm}\texttt{YOffset} & 0,2\\
+\grupa{Enemy}{Bounce}
+\hspace{0.3cm}\texttt{LostPower} & 0,2\\
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\textwidth}
+\begin{tabular}[t]{@{}p{5.6cm}r@{}}
+\toprule
+\textbf{Parametr} & \textbf{Wartość}\\
+\midrule
+\grupa{Ground}{Friction}
+\hspace{0.3cm}\texttt{FrictionPower} & 4,0\\
+\grupa{Heal}{Heal}
+\hspace{0.3cm}\texttt{HealAmount} & 30\\
+\grupa{Loading}{LoadingTime}
+\hspace{0.3cm}\texttt{MinLoadingTime}, \texttt{MaxLoadingTime} & 1; 4\\
+\grupa{Minimap}{Minimap}
+\hspace{0.3cm}\texttt{OrthographicSize}, \texttt{Height} & 14,0; 40,0\\
+\hspace{0.3cm}\texttt{TextureSize} & 256\\
+\grupa{Mushroom}{Rotation / Damage}
+\hspace{0.3cm}\texttt{MinAngle}, \texttt{MaxAngle} & 0, 360\\
+\hspace{0.3cm}\texttt{Damage} & 17\\
+\grupa{Obstacles}{Obstacles}
+\hspace{0.3cm}\texttt{BumperPower} & 12,0\\
+\hspace{0.3cm}\texttt{BumperMaxSpeed} & 30,0\\
+\hspace{0.3cm}\texttt{KnockPower} & 10,0\\
+\hspace{0.3cm}\texttt{SpinnerSpeed} & 90,0\\
+\hspace{0.3cm}\texttt{MovingWallSpeed} & 2,5\\
+\hspace{0.3cm}\texttt{MovingWallDistance} & 2,5\\
+\grupa{Push}{Push}
+\hspace{0.3cm}\texttt{PushPower} & 8,0\\
+\grupa{UI}{Coin}
+\hspace{0.3cm}\texttt{ChangeSpeed}, \texttt{ScaleFontSpeed} & 0,05; 100\\
+\hspace{0.3cm}\texttt{MaxFontSize} & 33\\
+\grupa{UI}{Health}
+\hspace{0.3cm}\texttt{Delay}, \texttt{DefaultHealth} & 0,05; 100\\
+\hspace{0.3cm}\texttt{MaxFontSize} & 40\\
+\grupa{Wall / Wall Menu}{Bounce}
+\hspace{0.3cm}\texttt{LostPower} & 0,7 / 1,0\\
+\grupa{Wind}{Wind}
+\hspace{0.3cm}\texttt{MinStrength}, \texttt{MaxStrength} & 0,3; 0,8\\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\endgroup
+
+\section*{Załącznik C. Instrukcja uruchomienia i budowania aplikacji}
+\addcontentsline{toc}{section}{Załącznik C. Instrukcja uruchomienia i budowania aplikacji}
+
+Wymagany jest edytor Unity 2022.3.60f1, a~do budowania wersji Android także moduły
+Android Build Support, Android SDK \& NDK Tools oraz OpenJDK, instalowane w~programie
+Unity Hub. Pierwsze otwarcie projektu i~pierwsze budowanie wymagają połączenia
+z~internetem (pakiet UniTask oraz zależności Androida wtyczek Firebase i~Appodeal).
+\begin{enumerate}[leftmargin=1.9cm, itemsep=0pt]
+  \item Otworzyć katalog projektu w~programie Unity Hub i~poczekać na import zasobów.
+  \item Aby zagrać w~edytorze, otworzyć scenę \sciezka{Assets/Scenes/Bootstrap.unity}
+        i~nacisnąć przycisk odtwarzania; strzał wykonuje się, przeciągając myszą od kuli.
+  \item Aby zbudować plik APK, wybrać polecenie \emph{Build $\rightarrow$ Android APK}
+        (wynik: \sciezka{Builds/Android/BallFinisher.apk}) lub uruchomić skrypt
+        \sciezka{./Build-Android.ps1}, który buduje grę w~osobnej kopii projektu.
+  \item Parametry rozgrywki zmienia się w~plikach JSON w~katalogu
+        \sciezka{Assets/Resources/Configurations}; są one sprawdzane przed każdym budowaniem.
+\end{enumerate}

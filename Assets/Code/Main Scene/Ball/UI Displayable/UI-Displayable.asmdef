@@ -1,0 +1,17 @@
+{
+    "name": "UI-Displayable",
+    "rootNamespace": "",
+    "references": [
+        "GUID:0c9bdbd2709fb0b44b9f217e7787f898",
+        "GUID:ec75a737a3289e140825d8c8cd49ebde"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

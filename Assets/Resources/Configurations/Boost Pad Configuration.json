@@ -1,0 +1,7 @@
+{
+    "Boost Pad":
+    {
+        "BoostPower": 20.0,
+        "MaxSpeed"  : 35.0
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "Minimap":
+    {
+        "OrthographicSize": 14.0,
+        "Height"          : 40.0,
+        "TextureSize"     : 256
+    }
+}

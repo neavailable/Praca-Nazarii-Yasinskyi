@@ -1,0 +1,308 @@
+% ============================================================================
+%  Rozdział 2. Tło teoretyczne i wykorzystane technologie
+% ============================================================================
+\chapter{Tło teoretyczne i wykorzystane technologie}
+\label{rozdz:podstawy}
+
+Przed rozpoczęciem implementacji konieczne było uporządkowanie wiedzy o~dwóch obszarach.
+Pierwszy dotyczy samej gry: jakie cechy decydują o~tym, że rozgrywka zręcznościowa jest
+czytelna i~angażująca. Drugi obejmuje narzędzia programistyczne, czyli silnik Unity,
+jego model obiektowy i~system fizyki, oraz biblioteki, które pozwalają uporządkować kod
+ponad to, co oferuje sam silnik. W~rozdziale omówiono kolejno: pętlę rozgrywki gier
+zręcznościowych, model komponentowy i~cykl życia skryptów w~Unity, system fizyki,
+wstrzykiwanie zależności z~biblioteką Zenject, programowanie reaktywne z~biblioteką R3,
+asynchroniczność opartą na UniTask, wzorzec MVVM oraz wzorce projektowe stosowane
+w~grach.
+
+\section{Pętla rozgrywki w grach zręcznościowych}
+
+Jesse Schell opisuje grę jako system, w~którym gracz podejmuje decyzje w~ramach reguł,
+a~gra natychmiast odpowiada na te decyzje \cite{schell}. W~grach zręcznościowych podstawową
+jednostką tego systemu jest krótka pętla: gracz ocenia sytuację, wykonuje akcję, obserwuje
+jej skutek i~na tej podstawie planuje następną. W~opisywanej grze pętla ta trwa od kilku
+do kilkunastu sekund: gracz wybiera kierunek i~siłę strzału, kula toczy się, odbija od
+ścian i~zbiera monety, po czym gracz koryguje tor kolejnym strzałem.
+
+Scott Rogers zwraca uwagę, że gracz uczy się zasad gry przede wszystkim przez informację
+zwrotną, a~nie przez tekst \cite{rogers}. Każde zdarzenie powinno mieć widoczny skutek:
+zebrana moneta znika z~animacją, licznik monet pulsuje, kula po zderzeniu ze ścianą
+zostaje na chwilę zgnieciona i~zmienia kolor, a~utrata zdrowia jest widoczna na pasku
+życia. Z~punktu widzenia architektury oznacza to, że jedno zdarzenie w~logice gry musi
+trafić do kilku niezależnych odbiorców. To bezpośrednio uzasadnia zastosowanie wzorca
+obserwatora i~programowania reaktywnego, omówionych w~dalszej części rozdziału.
+
+Gatunek cechuje także powtarzalność: gracz wraca do tego samego poziomu, aby poprawić
+wynik, więc gra powinna mierzyć postęp i~przechowywać najlepsze rezultaty, a~kolejne
+poziomy powinny zwiększać trudność bez zmiany zasad sterowania.
+
+\section{Silnik Unity i jego model komponentowy}
+
+Unity jest silnikiem gier rozwijanym przez Unity Technologies, w~którym logikę aplikacji
+pisze się w~języku C\# \cite{unity-manual}. W~projekcie wykorzystano wersję 2022.3 LTS,
+czyli wydanie o~przedłużonym okresie wsparcia, zalecane do projektów, w~których
+stabilność jest ważniejsza od dostępu do najnowszych funkcji.
+
+\subsection{Obiekty gry, komponenty i prefabrykaty}
+
+Podstawowym elementem sceny jest obiekt gry (\klasa{GameObject}), który sam w~sobie nie ma
+żadnego zachowania. Zachowanie i~wygląd nadają mu dołączone komponenty: transformacja,
+siatka i~materiał, zderzacz, ciało sztywne lub skrypt użytkownika dziedziczący po klasie
+\klasa{MonoBehaviour}. Obiekt skonfigurowany w~edytorze można zapisać jako prefabrykat
+(\emph{prefab}), czyli szablon, z~którego w~czasie działania gry tworzy się dowolną liczbę
+kopii. Scena jest plikiem zawierającym hierarchię obiektów; gra składa się z~kilku scen
+ładowanych kolejno przez menedżera scen.
+
+Model komponentowy sprzyja kompozycji zamiast dziedziczenia, ale ma istotne ograniczenie:
+instancje komponentów tworzy silnik, a~nie programista. Klasa dziedzicząca po
+\klasa{MonoBehaviour} nie może mieć konstruktora z~parametrami, więc zależności muszą być
+ustawiane po utworzeniu obiektu. W~projekcie rozwiązano to przez podział klas na dwie
+grupy. Cienkie komponenty \klasa{MonoBehaviour} odbierają zależności z~kontenera i~zdarzenia
+silnika, a~właściwą logikę realizują zwykłe klasy C\# (w~kodzie oznaczone przyrostkiem
+\kod{Logic}), tworzone przez konstruktor.
+
+\subsection{Cykl życia skryptów}
+
+Silnik wywołuje metody komponentów w~ściśle określonej kolejności \cite{unity-order}.
+Najważniejsze z~nich przedstawiono na rysunku~\ref{rys:cykl-zycia}. Metoda \kod{Awake}
+jest wywoływana raz, zaraz po utworzeniu obiektu, \kod{OnEnable} przy każdej aktywacji,
+a~\kod{Start} przed pierwszą klatką, w~której obiekt jest aktywny. Następnie w~każdej
+klatce wykonywane są \kod{Update} i~\kod{LateUpdate}, a~niezależnie od nich, ze stałym
+krokiem czasu, \kod{FixedUpdate}, w~którym należy modyfikować ciała sztywne. Dezaktywacja
+i~zniszczenie obiektu wywołują \kod{OnDisable} oraz \kod{OnDestroy}; w~tych metodach
+projekt zwalnia subskrypcje zdarzeń.
+
+\begin{figure}[!htb]
+  \centering
+  \begin{tikzpicture}[diag, node distance=4mm and 7mm]
+    \node[modul, minimum width=2.4cm] (awake) {Awake};
+    \node[modul, minimum width=2.4cm, right=of awake] (enable) {OnEnable};
+    \node[modul, minimum width=2.4cm, right=of enable] (start) {Start};
+    \node[akcent, minimum width=2.6cm, below=12mm of awake] (fixed) {FixedUpdate\\[-1pt]{\scriptsize krok 0{,}02 s, fizyka}};
+    \node[akcent, minimum width=2.6cm, right=of fixed] (update) {Update\\[-1pt]{\scriptsize raz na klatkę}};
+    \node[akcent, minimum width=2.6cm, right=of update] (late) {LateUpdate\\[-1pt]{\scriptsize kamera, interfejs}};
+    \node[modul, minimum width=2.4cm, below=12mm of update] (disable) {OnDisable};
+    \node[modul, minimum width=2.4cm, right=of disable] (destroy) {OnDestroy};
+    \draw[strz] (awake) -- (enable);
+    \draw[strz] (enable) -- (start);
+    \draw[strz] (start.south) -- ++(0,-4mm) -| (fixed.north);
+    \draw[strz] (fixed) -- (update);
+    \draw[strz] (update) -- (late);
+    \draw[strz] (late.east) -- ++(5mm,0) |- ($(fixed.south)+(0,-3mm)$) -- (fixed.south);
+    \node[font=\scriptsize, anchor=west] at ($(late.east)+(5mm,-0.55)$) {następna klatka};
+    \draw[strzp] (update.south) -- (disable.north);
+    \draw[strz] (disable) -- (destroy);
+    \begin{scope}[on background layer]
+      \node[draw=black!40, dashed, rounded corners, fit=(fixed)(update)(late), inner sep=5mm,
+            label={[font=\scriptsize]below left:pętla gry}] {};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{Uproszczona kolejność wywołań metod cyklu życia komponentu \klasa{MonoBehaviour}; Źródło: Opracowanie własne na podstawie \cite{unity-order}}
+  \label{rys:cykl-zycia}
+\end{figure}
+
+Kolejność ta ma bezpośrednie konsekwencje dla projektu. Zenject wstrzykuje zależności
+przed wywołaniem \kod{Awake} i~\kod{Start}, więc w~metodzie oznaczonej atrybutem
+\kod{[Inject]} wolno korzystać wyłącznie z~przekazanych argumentów, a~nie z~innych
+komponentów, które mogły jeszcze nie zostać zainicjalizowane. Subskrypcje zakładane
+w~\kod{Start} muszą z~kolei zostać zwolnione w~\kod{OnDestroy}, ponieważ ponowne
+wczytanie sceny niszczy wszystkie jej obiekty.
+
+\subsection{System fizyki}
+
+Do symulacji fizyki trójwymiarowej Unity wykorzystuje silnik NVIDIA PhysX
+\cite{unity-physics}. Obiekt podlega symulacji, jeśli ma komponent \klasa{Rigidbody};
+jego kształt kolizyjny określa zderzacz (\klasa{SphereCollider}, \klasa{BoxCollider},
+\klasa{CapsuleCollider} lub \klasa{MeshCollider}). Zderzacz może działać w~dwóch trybach.
+W~trybie zwykłym obiekty nie przenikają się, a~silnik wywołuje metody
+\kod{OnCollisionEnter}, \kod{OnCollisionStay} i~\kod{OnCollisionExit}, przekazując punkty
+styku oraz wektory normalne powierzchni. W~trybie wyzwalacza (\emph{trigger}) obiekty
+przenikają się swobodnie, a~silnik zgłasza jedynie zdarzenia \kod{OnTriggerEnter}
+i~\kod{OnTriggerExit}. Monety, apteczki, pola przyspieszające i~meta są w~grze
+wyzwalaczami, a~ściany, przeciwnicy i~przeszkody zwykłymi zderzaczami.
+
+Ciało sztywne może być dynamiczne, czyli poruszane przez siły i~kolizje, albo kinematyczne,
+czyli przesuwane wyłącznie przez skrypt metodami \kod{MovePosition} i~\kod{MoveRotation}.
+Ruchome ściany i~obracające się belki są ciałami kinematycznymi: poruszają się po zadanym
+torze, ale przy tym poprawnie wypychają kulę, z~którą się zderzają. Symulacja jest
+wykonywana ze stałym krokiem czasu, w~projekcie równym domyślnej wartości 0{,}02~s,
+co odpowiada 50~krokom fizyki na sekundę niezależnie od liczby klatek obrazu.
+
+Ważnym narzędziem jest również rzutowanie promieni (\emph{raycasting}), czyli wyznaczanie
+pierwszego zderzacza przeciętego przez półprostą \cite{unity-raycast}. Funkcja
+\kod{Physics.Raycast} przyjmuje parametr \klasa{QueryTriggerInteraction}, który pozwala
+pominąć wyzwalacze. W~grze wykorzystano to do sprawdzania, czy gracz dotknął kuli,
+nawet gdy kula znajduje się wewnątrz pola przyspieszającego lub apteczki.
+
+\subsection{Universal Render Pipeline, system wejścia i zestawy kompilacji}
+
+Do renderowania wykorzystano Universal Render Pipeline (URP) w~wersji 14, czyli potok
+renderowania przeznaczony dla szerokiego zakresu urządzeń, w~tym telefonów \cite{urp}.
+Obsługę wejścia zrealizowano za pomocą pakietu Input System, w~którym akcje gracza
+definiuje się niezależnie od urządzeń, a~następnie przypisuje do nich konkretne kontrolki
+\cite{inputsystem}. Jedna akcja wciśnięcia może więc reagować zarówno na lewy przycisk
+myszy, jak i~na dotknięcie ekranu.
+
+Kod gry podzielono na zestawy kompilacji (\emph{assembly definitions}) \cite{unity-asmdef}.
+Każdy plik \kod{.asmdef} definiuje osobną bibliotekę z~jawnie zadeklarowaną listą
+zależności. Ma to dwie zalety. Po pierwsze, zmiana w~jednym module powoduje ponowną
+kompilację tylko tego modułu i~zależnych od niego, a~nie całego projektu. Po drugie,
+kompilator nie pozwala odwołać się do klasy z~zestawu, który nie został zadeklarowany jako
+zależność, więc niezamierzone powiązania pomiędzy modułami są wykrywane na etapie
+kompilacji, a~nie przeglądu kodu.
+
+\section{Wstrzykiwanie zależności i biblioteka Zenject}
+\label{sec:di}
+
+Wstrzykiwanie zależności (\emph{Dependency Injection}) polega na tym, że obiekt nie tworzy
+ani nie wyszukuje swoich zależności, lecz otrzymuje je z~zewnątrz, najczęściej przez
+konstruktor \cite{seemann}. Miejsce, w~którym aplikacja składa graf obiektów, nazywa się
+korzeniem kompozycji (\emph{composition root}). Dzięki temu klasy zależą od abstrakcji
+i~nie znają sposobu tworzenia swoich współpracowników, co ułatwia wymianę implementacji
+i~testowanie. Alternatywą powszechną w~projektach Unity są singletony oraz lokalizator
+usług; Nystrom zwraca uwagę, że oba rozwiązania ukrywają zależności i~utrudniają
+określenie, który kod korzysta z~danego obiektu \cite{nystrom}.
+
+Zenject (rozwijany również pod nazwą Extenject) jest kontenerem wstrzykiwania zależności
+przeznaczonym dla Unity \cite{zenject}. Jego konfiguracja opiera się na trzech pojęciach.
+Kontekst (\klasa{ProjectContext}, \klasa{SceneContext}) określa zasięg kontenera:
+kontekst projektu istnieje przez cały czas działania aplikacji, a~kontekst sceny tylko do
+jej zamknięcia, przy czym kontener sceny dziedziczy powiązania kontenera projektu.
+Instalator (\klasa{MonoInstaller}) to klasa, w~której metodzie \kod{InstallBindings}
+rejestruje się powiązania typów z~instancjami. Powiązanie (\emph{binding}) zapisuje się
+płynnym interfejsem, np. \kod{Container.Bind<T>().FromInstance(obiekt).AsSingle()}.
+
+\begin{figure}[!htb]
+  \centering
+  \begin{tikzpicture}[diag, node distance=5mm and 6mm]
+    \node[akcent, minimum width=12.4cm, minimum height=9mm] (proj)
+      {\textbf{ProjectContext} (prefab w~katalogu Resources, istnieje przez cały czas działania gry)\\
+       BootstrapInstaller: \kod{LoadLevel} (nazwa poziomu do wczytania)};
+    \node[modul, below left=9mm and -2.9cm of proj, minimum width=3.6cm] (menu)
+      {\textbf{SceneContext}\\ \textit{Main Menu}\\[1pt]
+       BallMenuInstaller\\ WallMenuInstaller};
+    \node[modul, right=of menu, minimum width=3.6cm] (load)
+      {\textbf{SceneContext}\\ \textit{Loading}\\[1pt]
+       LoadingInstaller\\ \phantom{x}};
+    \node[modul, right=of load, minimum width=3.6cm] (lvl)
+      {\textbf{SceneContext}\\ \textit{Level 1, 2, 3}\\[1pt]
+       Ball-, Coins-, Enemies-,\\ Ground-, UI-, Finish-, \dots};
+    \draw[strz] (proj.south -| menu.north) -- (menu.north);
+    \draw[strz] (proj.south -| load.north) -- (load.north);
+    \draw[strz] (proj.south -| lvl.north) -- (lvl.north);
+    \node[font=\scriptsize, below=2mm of load] {kontenery scen dziedziczą powiązania kontenera projektu};
+  \end{tikzpicture}
+  \caption{Hierarchia kontekstów Zenject w~grze \emph{Ball Finisher}; \zrodloWlasne}
+  \label{rys:konteksty}
+\end{figure}
+
+Zenject obsługuje wstrzykiwanie przez konstruktor, pola, właściwości oraz metody.
+W~przypadku komponentów \klasa{MonoBehaviour} stosuje się wstrzykiwanie przez metodę
+oznaczoną atrybutem \kod{[Inject]}, która pełni rolę konstruktora. Kontener wstrzykuje
+zależności do wszystkich komponentów obecnych w~scenie podczas jej wczytywania, natomiast
+obiekty tworzone później muszą powstawać przez metodę \kod{DiContainer.InstantiatePrefab},
+aby ich komponenty również otrzymały zależności. Strukturę kontekstów zastosowaną w~grze
+przedstawia rysunek~\ref{rys:konteksty}.
+
+\section{Programowanie reaktywne i biblioteka R3}
+\label{sec:reaktywne}
+
+Programowanie reaktywne traktuje zdarzenia jako strumienie wartości rozłożone w~czasie.
+Podstawą jest wzorzec obserwatora \cite{gof}: obiekt obserwowany (\emph{observable})
+publikuje kolejne wartości, a~zarejestrowani obserwatorzy otrzymują je w~kolejności
+publikacji. Biblioteki z~rodziny ReactiveX rozszerzają ten wzorzec o~operatory, takie jak
+filtrowanie, łączenie i~przekształcanie strumieni, oraz o~jednolity sposób kończenia
+subskrypcji \cite{reactivex}.
+
+W~ekosystemie Unity przez wiele lat standardem była biblioteka UniRx \cite{unirx}.
+W~lutym 2024 roku jej repozytorium zostało zarchiwizowane, a~opis projektu odsyła do
+biblioteki R3 tego samego autora jako rozwiniętej wersji UniRx. R3, którego wersja 1.0
+ukazała się 16 lutego 2024 roku, jest implementacją Reactive Extensions napisaną od
+podstaw z~myślą o~współczesnej platformie .NET i~silnikach gier \cite{r3}. W~projekcie
+wykorzystano trzy jej typy:
+\begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
+  \item \klasa{Subject<T>}, czyli strumień, do którego kod wysyła wartości metodą
+        \kod{OnNext}; w~grze reprezentuje zdarzenia jednorazowe, np. zebranie monety
+        (\klasa{Subject<int>} z~wartością monety) lub dotarcie do mety
+        (\klasa{Subject<Unit>}, gdzie \klasa{Unit} oznacza brak wartości),
+  \item \klasa{ReactiveProperty<T>}, czyli właściwość, która przechowuje bieżącą wartość
+        i~powiadamia obserwatorów o~jej zmianie; w~grze przechowuje m.in. tekst licznika
+        monet, prędkość kuli i~wynik poziomu,
+  \item subskrypcję zwracaną przez metodę \kod{Subscribe} jako obiekt \klasa{IDisposable};
+        wywołanie \kod{Dispose} kończy odbieranie zdarzeń i~zwalnia referencje.
+\end{itemize}
+
+Istotną różnicą względem zwykłych zdarzeń C\# (\kod{event}, \kod{Action}) jest to, że
+subskrypcja jest obiektem, który można przechowywać, grupować i~zwalniać razem z~obiektem
+właściciela. Wyrażenie lambda przypisane do zdarzenia C\# trudno później odpiąć, ponieważ
+każde jego wystąpienie tworzy nowy delegat; w~przypadku R3 wystarczy zachować zwrócony
+obiekt i~wywołać na nim \kod{Dispose}. W~projekcie oba mechanizmy współistnieją: zdarzenia
+C\# są używane wewnątrz pojedynczych modułów, a~strumienie R3 tam, gdzie zdarzenie trafia
+do kilku niezależnych odbiorców lub przekracza granicę modułu.
+
+\section{Programowanie asynchroniczne z wykorzystaniem UniTask}
+
+Animacje i~opóźnienia w~Unity tradycyjnie realizuje się za pomocą korutyn, czyli metod
+zwracających \klasa{IEnumerator}, wznawianych przez silnik w~kolejnych klatkach. Korutyny
+wymagają jednak obiektu \klasa{MonoBehaviour}, nie zwracają wyniku i~nie obsługują wyjątków
+w~naturalny sposób. Biblioteka UniTask udostępnia własny typ zadania zgodny ze składnią
+\kod{async}/\kod{await}, zrealizowany jako struktura, dzięki czemu typowe operacje nie
+alokują pamięci na stercie \cite{unitask}. Oczekiwanie jest powiązane z~fazami pętli gry
+silnika, więc instrukcja \kod{await UniTask.WaitForFixedUpdate()} wznawia metodę
+w~kolejnym kroku fizyki, podobnie jak zrobiłaby to korutyna.
+
+W~grze UniTask wykorzystano do animacji zgniatania kuli, zmniejszania zebranych monet,
+płynnej zmiany licznika monet, wypełniania paska ładowania oraz odmierzania czasu animacji
+śmierci przeciwnika. Metody niezwracające wyniku mają typ \klasa{UniTaskVoid}
+i~są uruchamiane wywołaniem \kod{Forget()}, a~dłuższe animacje przyjmują token anulowania
+(\klasa{CancellationToken}), który pozwala przerwać je w~dowolnym momencie.
+
+\section{Wzorzec Model--View--ViewModel}
+
+Wzorzec Model--View--ViewModel (MVVM) został opisany w~2005 roku przez Johna Gossmana
+na potrzeby aplikacji tworzonych w~technologii WPF \cite{gossman}. Dzieli on warstwę
+prezentacji na trzy role \cite{ms-mvvm}. Model przechowuje dane i~logikę dziedziny,
+widok odpowiada wyłącznie za wyświetlanie, a~model widoku przekształca dane modelu do
+postaci gotowej do prezentacji i~udostępnia je widokowi przez mechanizm powiązań. Widok
+zna model widoku, ale model widoku nie zna widoku, a~model nie zna żadnego z~nich
+(rysunek~\ref{rys:mvvm}).
+
+\begin{figure}[!htb]
+  \centering
+  \begin{tikzpicture}[diag, node distance=6mm and 19mm]
+    \node[modul, minimum width=3.0cm, minimum height=1.5cm] (v) {\textbf{View}\\ komponent TextMeshPro,\\ suwak, obraz};
+    \node[akcent, minimum width=3.0cm, minimum height=1.5cm, right=of v] (vm) {\textbf{ViewModel}\\ \kod{ReactiveProperty<string>}\\ \kod{Subject<Unit>}};
+    \node[modul, minimum width=3.0cm, minimum height=1.5cm, right=of vm] (m) {\textbf{Model}\\ stan gry,\\ np. liczba monet};
+    \draw[strz] ([yshift=3mm]v.east) -- node[above, font=\scriptsize]{subskrypcja} ([yshift=3mm]vm.west);
+    \draw[strzp] ([yshift=-3mm]vm.west) -- node[below, font=\scriptsize]{nowa wartość} ([yshift=-3mm]v.east);
+    \draw[strz] ([yshift=3mm]vm.east) -- node[above, font=\scriptsize]{subskrypcja} ([yshift=3mm]m.west);
+    \draw[strzp] ([yshift=-3mm]m.west) -- node[below, font=\scriptsize]{zdarzenie zmiany} ([yshift=-3mm]vm.east);
+  \end{tikzpicture}
+  \caption{Zależności we~wzorcu MVVM w~wariancie opartym na strumieniach reaktywnych; \zrodloWlasne}
+  \label{rys:mvvm}
+\end{figure}
+
+Unity nie posiada mechanizmu powiązań danych dla systemu interfejsu uGUI, który został
+użyty w~projekcie. Rolę powiązań pełnią więc subskrypcje strumieni R3: widok subskrybuje
+właściwości reaktywne modelu widoku i~w~reakcji na zmianę ustawia tekst lub wartość
+suwaka. Model widoku może przy tym realizować logikę prezentacji niezależną od komponentów
+silnika, np. stopniowe zwiększanie wyświetlanej liczby monet lub zaokrąglanie prędkości do
+jednego miejsca po przecinku.
+
+\section{Wzorce projektowe stosowane w grach}
+
+Oprócz wzorców omówionych wyżej w~projekcie wykorzystano kilka rozwiązań typowych dla
+programowania gier \cite{nystrom}. Fabryka (\emph{Factory}) skupia w~jednym miejscu
+tworzenie obiektów określonego rodzaju; w~grze fabryki tworzą kulę, monety, przeciwników
+i~efekty cząsteczkowe, korzystając z~kontenera Zenject. Pula obiektów (\emph{Object Pool})
+polega na jednorazowym utworzeniu zestawu obiektów i~ich wielokrotnym użyciu zamiast
+tworzenia i~niszczenia w~trakcie rozgrywki. Ogranicza to liczbę alokacji, a~w~środowisku
+z~automatycznym odśmiecaniem pamięci także liczbę przerw wywołanych pracą odśmiecacza,
+które w~grze objawiają się chwilowym spadkiem płynności.
+
+Trzecim rozwiązaniem są komponenty znacznikowe (\emph{marker components}), czyli puste klasy
+dziedziczące po \klasa{MonoBehaviour}, które pozwalają rozpoznać rodzaj obiektu bez
+porównywania nazw lub tagów. Sprawdzenie \kod{TryGetComponent(out BallMarker \_)} jest
+odporne na literówki i~zmiany nazw obiektów w~scenie. Czwartym jest sterowanie danymi
+(\emph{data-driven design}): parametry rozgrywki, takie jak siła tarcia, obrażenia
+przeciwników czy siła pól przyspieszających, są przechowywane w~plikach konfiguracyjnych,
+a~nie w~kodzie, dzięki czemu strojenie rozgrywki nie wymaga ponownej kompilacji.

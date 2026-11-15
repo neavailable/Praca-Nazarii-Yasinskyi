@@ -1,0 +1,23 @@
+{
+    "name": "UI-Coins",
+    "rootNamespace": "",
+    "references": [
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:417b4f64453c4a74992541d83927d756",
+        "GUID:18fba59aeae050e4c8aa6991ae6ef8a5",
+        "GUID:753fbc9479f10094e953f20e4efffe99",
+        "GUID:f669e368b7672c843b171a8df4e0ec8c",
+        "GUID:a9e291d4471755d43ae253922e5300b0",
+        "GUID:5042d858b46740b499cf81756942bef4"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
