@@ -15,7 +15,7 @@ Wraz ze wzrostem liczby obiektów i~zdarzeń na planszy rośnie liczba zależno�
 fragmentami kodu. Jeśli każdy skrypt sam wyszukuje potrzebne mu obiekty i~bezpośrednio
 wywołuje metody innych komponentów, już przy kilkudziesięciu klasach zmiana jednej
 mechaniki zaczyna wymagać poprawek w~wielu miejscach. Niniejsza praca opisuje projekt
-i~implementację gry \emph{Ball Finisher}, w~której od początku przyjęto inne podejście:
+i~implementację trójwymiarowej gry zręcznościowej, w~której od początku przyjęto inne podejście:
 zależności są dostarczane przez kontener wstrzykiwania zależności, zdarzenia rozgrywki są
 modelowane jako strumienie reaktywne, a~logika gry jest oddzielona od komponentów silnika
 Unity.
@@ -105,7 +105,7 @@ dokumentacji. Rysunek~\ref{rys:hud-wstep} przedstawia widok rozgrywki na pierwsz
 \begin{figure}[!htb]
   \centering
   \zrzut[0.72\textwidth]{poziom1_hud}
-  \caption{Widok rozgrywki na pierwszym poziomie gry \emph{Ball Finisher}; \zrodloWlasne}
+  \caption{Widok rozgrywki na pierwszym poziomie opracowanej gry; \zrodloWlasne}
   \label{rys:hud-wstep}
 \end{figure}
 
@@ -193,7 +193,7 @@ przeciwny do ruchu palca wyznacza tor piłki \cite{gra-golf-recenzja}. Rozgrywka
 w~trybie wieloosobowym, w~którym na tym samym torze może jednocześnie grać do sześciu
 osób.
 
-Sterowanie przyjęte w~\emph{Ball Finisher} działa na tej samej zasadzie, ale strzał można
+Sterowanie przyjęte w~opracowanej grze działa na tej samej zasadzie, ale strzał można
 wykonać również w~czasie ruchu kuli, a~na planszy działają przeciwnicy, wiatr i~elementy
 zmieniające jej prędkość.
 
@@ -211,7 +211,7 @@ samouczka; w~opisywanym projekcie kierunek strzału podpowiada linia celownicza.
 
 \begin{table}[!htb]
   \centering
-  \caption{Porównanie wybranych gier z~opracowaną grą \emph{Ball Finisher}; \zrodloWlasne}
+  \caption{Porównanie wybranych gier z~opracowaną grą; \zrodloWlasne}
   \label{tab:porownanie-gier}
   \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.35cm}
       >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X
@@ -224,7 +224,7 @@ samouczka; w~opisywanym projekcie kierunek strzału podpowiada linia celownicza.
     Golf Battle & przeciągnięcie i~zwolnienie & trafienie do dołka & przeszkody na torze & nie \\
     Angry Birds & odciągnięcie procy & zniszczenie celów & brak & nie \\
     \midrule
-    Ball Finisher & przeciągnięcie i~zwolnienie, także w~ruchu & zebranie monet, dotarcie do mety & przeciwnicy, przeszkody ruchome, wiatr & tak \\
+    Opracowana gra & przeciągnięcie i~zwolnienie, także w~ruchu & zebranie monet, dotarcie do mety & przeciwnicy, przeszkody ruchome, wiatr & tak \\
     \bottomrule
   \end{tabularx}
 \end{table}
