@@ -13,8 +13,8 @@ przypadki użycia oraz projekt architektury oprogramowania.
 Gracz steruje kulą umieszczoną na płaskiej planszy otoczonej ścianami. Kamera śledzi kulę
 z~góry i~z~tyłu, pod stałym kątem, dzięki czemu widoczny jest fragment planszy wokół kuli,
 a~pełny układ poziomu pokazuje minimapa w~prawym górnym rogu ekranu. Strzał wykonuje się,
-dotykając kuli i~przeciągając palec (lub kursor myszy) w~stronę przeciwną do zamierzonego
-kierunku ruchu. W~trakcie przeciągania od kuli do palca rysowana jest linia celownicza,
+klikając kulę i~przeciągając kursor myszy w~stronę przeciwną do zamierzonego
+kierunku ruchu. W~trakcie przeciągania od kuli do kursora rysowana jest linia celownicza,
 a~po zwolnieniu kula rusza z~mocą proporcjonalną do długości gestu. Kolejny strzał można
 wykonać w~dowolnym momencie, także gdy kula jeszcze się toczy.
 
@@ -124,9 +124,8 @@ Wymagania niefunkcjonalne dotyczą technologii, jakości kodu i~parametrów dzia
 aplikacji:
 \begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
   \item implementacja w~silniku Unity 2022.3 LTS w~języku C\#,
-  \item działanie na urządzeniach z~systemem Android w~wersji 9 (API~28) lub nowszej,
-        z~architekturą ARMv7 lub ARM64, oraz w~edytorze Unity w~systemie Windows,
-  \item obsługa wejścia z~ekranu dotykowego i~myszy przez jedną definicję akcji,
+  \item działanie w~edytorze Unity w~systemie Windows,
+  \item obsługa wejścia z~myszy i~ekranu dotykowego przez jedną definicję akcji,
   \item płynna rozgrywka; fizyka obliczana ze stałym krokiem 0{,}02~s niezależnie od
         liczby klatek obrazu,
   \item modułowa struktura kodu z~jawnymi zależnościami pomiędzy zestawami kompilacji,
@@ -147,9 +146,7 @@ aplikacji:
 Prace implementacyjne i~testy w~edytorze prowadzono na komputerze stacjonarnym
 z~procesorem AMD Ryzen~5 9600X, kartą graficzną AMD Radeon RX~9070~XT i~32~GB pamięci
 operacyjnej, pracującym pod kontrolą systemu Windows~11; dodatkowo grę uruchamiano na
-laptopie HP. Wykorzystano edytor Unity
-2022.3.60f1 z~modułami Android Build Support, Android SDK \& NDK Tools oraz OpenJDK,
-środowisko programistyczne JetBrains Rider oraz system kontroli wersji Git z~repozytorium
+laptopie HP. Wykorzystano edytor Unity 2022.3.60f1, środowisko programistyczne JetBrains Rider oraz system kontroli wersji Git z~repozytorium
 w~serwisie GitHub. Biblioteki R3 i~ObservableCollections zainstalowano z~repozytorium
 NuGet za pomocą narzędzia NuGetForUnity \cite{nugetforunity}, a~UniTask jako pakiet
 menedżera pakietów Unity pobierany z~repozytorium Git. Zenject i~Appodeal dołączono
@@ -158,20 +155,17 @@ w~postaci źródłowej w~katalogu \kod{Assets}, a~Firebase jako lokalne pakiety
 
 \subsection{Środowisko uruchomieniowe}
 
-Docelową platformą jest system Android. Wersja instalacyjna jest budowana z~zapleczem
-IL2CPP, które tłumaczy kod pośredni .NET na C++ i~kompiluje go do kodu natywnego
-\cite{unity-il2cpp}, dla architektur ARMv7 i~ARM64. Minimalny poziom API ustawiono na~28,
-co odpowiada systemowi Android~9 \cite{android-api}. Interfejs zaprojektowano dla
-orientacji poziomej, a~gra nie wymaga połączenia z~siecią.
+Gra jest uruchamiana na komputerze z~systemem Windows i~obsługiwana myszą. Interfejs
+zaprojektowano dla orientacji poziomej, a~gra nie wymaga połączenia z~siecią.
 
 \subsection{Ograniczenia działania}
 
 Analiza przyjętych rozwiązań pozwoliła wskazać następujące ograniczenia:
 \begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
-  \item rozpoczęcie strzału wymaga trafienia palcem w~kulę, co na małym ekranie przy
-        dużej odległości kamery bywa trudne; łagodzi to przycisk \emph{Push},
-  \item wyniki są przechowywane lokalnie w~\klasa{PlayerPrefs}, więc odinstalowanie
-        aplikacji je usuwa i~nie są one synchronizowane pomiędzy urządzeniami,
+  \item rozpoczęcie strzału wymaga trafienia kursorem w~kulę, co przy dużej odległości
+        kamery bywa trudne; łagodzi to przycisk \emph{Push},
+  \item wyniki są przechowywane lokalnie w~\klasa{PlayerPrefs}, więc nie są one
+        synchronizowane pomiędzy komputerami,
   \item poziomy są zaprojektowane ręcznie i~mają stałą liczbę elementów; losowe są jedynie
         kierunek i~siła wiatru, kierunek obrotu belek oraz faza ruchu ścian,
   \item gra nie zawiera warstwy dźwiękowej,
@@ -222,7 +216,7 @@ zaczyna odliczanie.
 
 \subsection{PU Wykonaj strzał}
 
-Gracz dotyka kuli i~przeciąga palec, a~gra wyświetla linię od kuli do punktu pod palcem.
+Gracz klika kulę i~przeciąga kursor, a~gra wyświetla linię od kuli do punktu pod kursorem.
 Po zwolnieniu gra wyznacza moc i~kierunek strzału; gest rozpoczęty poza kulą jest
 ignorowany. W~trakcie ruchu kuli gra realizuje przypadki rozszerzające:
 \begin{itemize}[leftmargin=1.9cm, itemsep=1pt]
@@ -237,7 +231,7 @@ ignorowany. W~trakcie ruchu kuli gra realizuje przypadki rozszerzające:
 \subsection{PU Wypchnij zablokowaną kulę}
 
 Kula zatrzymana przy ścianie, w~miejscu zasłoniętym dla kamery, może być niemożliwa do
-trafienia palcem. Przycisk \emph{Push} jest aktywny wyłącznie wtedy, gdy kula stoi.
+trafienia kursorem. Przycisk \emph{Push} jest aktywny wyłącznie wtedy, gdy kula stoi.
 Jego naciśnięcie nadaje kuli niewielką prędkość w~losowym kierunku, co pozwala wydostać ją
 z~takiego położenia, ale nie daje przewagi w~trakcie normalnej gry.
 

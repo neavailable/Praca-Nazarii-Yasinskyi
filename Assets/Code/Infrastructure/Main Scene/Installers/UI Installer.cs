@@ -47,6 +47,10 @@ namespace Infrastructure.MainScene.Installers
             (
                 new BindToPush(Container, new PushConfiguration().Load())
             );
+            _binders.Add
+            (
+                new BindToFeedback(Container)
+            );
         }
 
         private void Bind()

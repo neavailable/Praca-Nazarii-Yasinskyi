@@ -55,6 +55,10 @@ namespace Infrastructure.MainScene.Installers
                     new ObstaclesConfiguration().Load()
                 )
             );
+            _binders.Add
+            (
+                new BindToChaser(Container, new ChaserConfiguration().Load())
+            );
         }
 
         private void Bind()

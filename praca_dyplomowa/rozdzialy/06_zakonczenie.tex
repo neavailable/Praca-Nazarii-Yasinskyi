@@ -9,8 +9,7 @@ w~silniku Unity. Gra zawiera trzy poziomy, kompletny przepływ od menu
 głównego przez ekran ładowania do rozgrywki i~okna końca poziomu, system punktów życia,
 dwa typy przeciwników, sześć mechanizmów zmieniających ruch kuli (pola przyspieszające,
 odbijacze, obracające się belki, ruchome ściany, wiatr i~przycisk \emph{Push}), minimapę
-oraz pomiar czasu z~zapisem statystyk. Gra działa w~edytorze Unity oraz na urządzeniach
-z~systemem Android w~wersji 9 lub nowszej.
+oraz pomiar czasu z~zapisem statystyk. Gra działa w~edytorze Unity w~systemie Windows.
 
 \section{Podsumowanie realizacji celów}
 
@@ -26,8 +25,6 @@ korzystają z~puli obiektów, a~monety z~analogicznego mechanizmu wielokrotnego 
 Część założeń wniosku zrealizowano w~zmienionej formie. Zamiast biblioteki UniRx
 wykorzystano R3, którą autor UniRx wskazuje jako jej rozwiniętą wersję; zmiana ta nie
 wpłynęła na architekturę, ponieważ obie biblioteki opierają się na tych samych pojęciach.
-Platformą docelową stał się Android, ponieważ sterowanie gestem okazało się naturalne dla
-ekranu dotykowego, przy czym gra pozostaje w~pełni grywalna w~edytorze przy użyciu myszy.
 Zapis danych obejmuje lokalne statystyki poziomów, a~integracja z~Firebase została
 ograniczona do inicjalizacji i~weryfikacji zależności. Przygotowana obsługa reklam
 z~nagrodą Appodeal nie została jeszcze podłączona do rozgrywki.
@@ -72,7 +69,7 @@ gestu względem rozmiaru lub gęstości pikseli ekranu, przeniesienie tworzenia 
 inicjalizacji kontenera, obsługę wyczerpania puli efektów oraz eliminację alokacji przy
 aktualizacji licznika czasu. Klasy logiki nie zależą od komponentów silnika, więc można je
 objąć testami jednostkowymi w~trybie edycji pakietu Unity Test Framework bez uruchamiania
-scen. Warto również wykonać systematyczne pomiary wydajności na kilku telefonach.
+scen. Warto również wykonać systematyczne pomiary wydajności na komputerach o~różnej wydajności.
 
 Z~punktu widzenia gracza naturalnymi kierunkami rozwoju są: warstwa dźwiękowa, lokalizacja
 interfejsu na język polski, kolejne poziomy oraz edytor poziomów wykorzystujący istniejący
@@ -82,10 +79,9 @@ reklam z~nagrodą może posłużyć do przywracania zdrowia w~zamian za obejrzen
 
 \section{Obszary zastosowania opracowanych rozwiązań}
 
-Zastosowana architektura może posłużyć jako szablon dla innych niewielkich gier mobilnych
+Zastosowana architektura może posłużyć jako szablon dla innych niewielkich gier
 tworzonych w~Unity. Elementy takie jak wczytywanie konfiguracji z~walidacją przed
-budowaniem, binder jako jednostka rejestracji powiązań, generyczne klasy MVVM dla prostych
-paneli interfejsu czy zautomatyzowane budowanie w~osobnej kopii projektu nie zależą od
-mechaniki tej konkretnej gry. Projekt może być także materiałem dydaktycznym pokazującym
+budowaniem, binder jako jednostka rejestracji powiązań czy generyczne klasy MVVM dla prostych
+paneli interfejsu nie zależą od mechaniki tej konkretnej gry. Projekt może być także materiałem dydaktycznym pokazującym
 zastosowanie wstrzykiwania zależności i~programowania reaktywnego w~silniku, w~którym
 podejścia te nie są narzucane przez sam silnik.

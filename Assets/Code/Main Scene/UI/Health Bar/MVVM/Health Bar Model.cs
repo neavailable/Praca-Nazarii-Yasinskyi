@@ -42,6 +42,9 @@ namespace MainScene.UI.HealthBar.MVVM
             return true;
         }
 
+        // Used when the level time runs out: the ball loses all its health.
+        public void Kill() => GetDamage(_healthStorage.Health + 1);
+
         private void GetDamage(int damage)
         {
             _healthStorage.DecreaseHealth(damage);

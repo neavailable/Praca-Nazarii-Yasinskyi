@@ -2,6 +2,7 @@ using UnityEngine;
 using Zenject;
 using Configuration.Data;
 using MainScene.Ball;
+using MainScene.Feedback;
 
 
 namespace MainScene.Obstacles
@@ -14,12 +15,17 @@ namespace MainScene.Obstacles
         [SerializeField] private Transform _body;
 
         private ObstaclesData _obstaclesData;
+        private FeedbackPlayer _feedbackPlayer;
         private Vector3 _bodyScale;
         private float _popTime;
 
 
         [Inject]
-        private void Constructor(ObstaclesData obstaclesData) => _obstaclesData = obstaclesData;
+        private void Constructor(ObstaclesData obstaclesData, FeedbackPlayer feedbackPlayer)
+        {
+            _obstaclesData  = obstaclesData;
+            _feedbackPlayer = feedbackPlayer;
+        }
 
         private void Awake() => _bodyScale = _body.localScale;
 
@@ -45,6 +51,7 @@ namespace MainScene.Obstacles
                 _obstaclesData.BumperMaxSpeed
             );
             _popTime = _popDuration;
+            _feedbackPlayer.Play(FeedbackType.Bumper, collision.GetContact(0).point);
         }
     }
 }

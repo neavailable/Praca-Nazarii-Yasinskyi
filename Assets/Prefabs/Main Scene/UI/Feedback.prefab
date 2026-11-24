@@ -1,0 +1,228 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4644834506935877372
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5249080202428879894}
+  - component: {fileID: 8175859185244026896}
+  - component: {fileID: 942324461562729738}
+  - component: {fileID: 2939590898653425256}
+  m_Layer: 0
+  m_Name: Feedback
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &5249080202428879894
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4644834506935877372}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!82 &8175859185244026896
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4644834506935877372}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &942324461562729738
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4644834506935877372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea8340c86ef6c4b40b3b40ec31e8ce63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &2939590898653425256
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4644834506935877372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55fd330f820cc4a498d79d420e673116, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _burstPrefab: {fileID: 2242208311846618867, guid: ec944a6215c51e04caef2d2e61cb4235, type: 3}
+  _entries:
+  - Type: 0
+    Clip: {fileID: 8300000, guid: 03864f1dcc941d240924b2e9a6608767, type: 3}
+    Volume: 0.5
+    Color: {r: 1, g: 0.85, b: 0.2, a: 1}
+    Particles: 14
+    Speed: 3
+  - Type: 1
+    Clip: {fileID: 8300000, guid: 515c65185c42a5e4ead6288f4ca81dcf, type: 3}
+    Volume: 0.6
+    Color: {r: 0.3, g: 0.9, b: 0.4, a: 1}
+    Particles: 18
+    Speed: 3
+  - Type: 2
+    Clip: {fileID: 8300000, guid: 3a54365156d625d4c8db118e0cafb06f, type: 3}
+    Volume: 0.6
+    Color: {r: 0.25, g: 0.6, b: 1, a: 1}
+    Particles: 20
+    Speed: 4
+  - Type: 3
+    Clip: {fileID: 8300000, guid: 102a11d26a5981c47aec3a2fa635a456, type: 3}
+    Volume: 0.6
+    Color: {r: 0.95, g: 0.2, b: 0.25, a: 1}
+    Particles: 20
+    Speed: 4
+  - Type: 4
+    Clip: {fileID: 8300000, guid: 41866ef1df409ff4bb8bfcbc526a6885, type: 3}
+    Volume: 0.7
+    Color: {r: 0.8, g: 0.2, b: 0.7, a: 1}
+    Particles: 16
+    Speed: 6
+  - Type: 5
+    Clip: {fileID: 8300000, guid: f189de2019d4a8c4e9a4d4a7b8027554, type: 3}
+    Volume: 0.6
+    Color: {r: 1, g: 0.55, b: 0.1, a: 1}
+    Particles: 18
+    Speed: 5
+  - Type: 6
+    Clip: {fileID: 8300000, guid: e12cc428278896f4ca39ff39d0efe84a, type: 3}
+    Volume: 0.7
+    Color: {r: 0.85, g: 0.85, b: 0.85, a: 1}
+    Particles: 10
+    Speed: 4
+  - Type: 7
+    Clip: {fileID: 8300000, guid: f3b8e5565fc2bd44bbd31197cb0f0a66, type: 3}
+    Volume: 0.6
+    Color: {r: 1, g: 0.2, b: 0.2, a: 1}
+    Particles: 16
+    Speed: 5
+  - Type: 8
+    Clip: {fileID: 8300000, guid: dbb82990ad7ea7740982db3a0f82b1fc, type: 3}
+    Volume: 0.6
+    Color: {r: 0.8, g: 0.5, b: 1, a: 1}
+    Particles: 24
+    Speed: 5
+  - Type: 9
+    Clip: {fileID: 8300000, guid: 6799bac350f52d64390f11afdea94eb2, type: 3}
+    Volume: 0.7
+    Color: {r: 1, g: 0.85, b: 0.2, a: 1}
+    Particles: 60
+    Speed: 7
+  - Type: 10
+    Clip: {fileID: 8300000, guid: 74aca8c7de838274b965994a08d5b313, type: 3}
+    Volume: 0.7
+    Color: {r: 0.4, g: 0.4, b: 0.45, a: 1}
+    Particles: 30
+    Speed: 3

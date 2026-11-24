@@ -2,6 +2,7 @@
 using UnityEngine;
 using Zenject;
 using Configuration.Configurations;
+using Configuration.Data;
 using Infrastructure.MainScene.Installers.Binders;
 using MainScene.Coin;
 
@@ -29,7 +30,7 @@ namespace Infrastructure.MainScene.Installers
                 new BindToCoins
                 (
                     Container,
-                    new CoinValueConfiguration().Load(),
+                    LoadCoinValue(),
                     new CoinMovementConfiguration().Load(),
                     new CoinRotationConfiguration().Load(),
                     new CoinDestroyerConfiguration().Load()
@@ -48,6 +49,13 @@ namespace Infrastructure.MainScene.Installers
             (
                 new BindToHeal(Container, new HealConfiguration().Load())
             );
+        }
+
+        // Harder levels pay more for each coin.
+        private CoinValueData LoadCoinValue()
+        {
+            int multiplier = new LevelRulesConfiguration(gameObject.scene.name).Load().CoinMultiplier;
+            return new CoinValueData(new CoinValueConfiguration().Load().CoinValue * multiplier);
         }
 
         private void Bind()

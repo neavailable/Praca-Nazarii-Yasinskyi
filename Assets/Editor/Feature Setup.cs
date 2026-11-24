@@ -32,7 +32,7 @@ namespace BallFinisher.Editor
     // Builds the prefabs for the minimap, level timer, wind, boost pad and heal pickup features,
     // adds them to the level scenes and adds the control settings window to the main menu.
     // Running it again rebuilds the prefabs and HUD but keeps boost pads and pickups already placed in levels.
-    public static class FeatureSetup
+    public static partial class FeatureSetup
     {
         private const string ObjectsFolder = "Assets/Prefabs/Main Scene/Objects/";
         private const string UIFolder = "Assets/Prefabs/Main Scene/UI/";
@@ -122,7 +122,10 @@ namespace BallFinisher.Editor
                 HealPickup = CreateHealPickupPrefab(),
                 Bumper     = CreateBumperPrefab(),
                 Spinner    = CreateSpinnerPrefab(wallMaterial),
-                MovingWall = CreateMovingWallPrefab(wallMaterial)
+                MovingWall = CreateMovingWallPrefab(wallMaterial),
+                TimeCoin   = CreateTimePickupPrefab(false),
+                TimeTrap   = CreateTimePickupPrefab(true),
+                Chaser     = CreateChaserPrefab()
             };
             EditFinishWindowPrefab();
 
@@ -133,13 +136,16 @@ namespace BallFinisher.Editor
             GameObject windIndicator = CreateWindIndicatorPrefab();
             GameObject minimap       = CreateMinimapPrefab();
             GameObject pushButton    = CreatePushButtonPrefab();
+            GameObject objective     = CreateObjectivePrefab(hudFont);
+            GameObject feedback      = CreateFeedbackPrefab();
+            GameObject intro         = CreateLevelIntroPrefab(hudFont);
 
             foreach (string path in Levels)
             {
                 SetUpLevel
                 (
                     path,
-                    new [] { levelTimer, windIndicator, minimap, pushButton },
+                    new [] { levelTimer, windIndicator, minimap, pushButton, objective, feedback, intro },
                     levelPrefabs,
                     replaceLevelFeatures
                 );
@@ -607,8 +613,14 @@ namespace BallFinisher.Editor
             Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
             Transform canvas = FindInScene<HealthBar>().First().GetComponentInParent<Canvas>().rootCanvas.transform;
 
+            LevelLayout layout = LevelLayouts[scene.name];
+
             foreach (GameObject hudPrefab in hudPrefabs) ReplaceHudElement(canvas, hudPrefab);
-            PlaceLevelFeatures(scene, levelPrefabs, replaceLevelFeatures);
+            ApplyTheme(layout.Theme);
+            ThinEnemies(scene.name, layout.KeptEnemies);
+            PlaceLevelFeatures(scene, levelPrefabs, layout, replaceLevelFeatures);
+            ShowLevelIntroElements(scene);
+            ExportLevelPlan(scene.name, layout);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -623,11 +635,11 @@ namespace BallFinisher.Editor
             PrefabUtility.InstantiatePrefab(prefab, canvas);
         }
 
-        // Spreads obstacles, boost pads and heal pickups over the part of the level the ball can reach from its start,
+        // Spreads obstacles, pickups and chasers over the part of the level the ball can reach from its start,
         // so nothing lands behind a wall. Every object keeps a ball-wide gap to walls and to the others,
-        // so it can always be rolled around. Bigger levels get more of everything.
+        // so it can always be rolled around. How many of each comes from the level's difficulty.
         // Without replacing, a later run keeps whatever was placed or moved by hand.
-        private static void PlaceLevelFeatures(Scene scene, LevelPrefabs prefabs, bool replace)
+        private static void PlaceLevelFeatures(Scene scene, LevelPrefabs prefabs, LevelLayout layout, bool replace)
         {
             GameObject existing = scene.GetRootGameObjects().FirstOrDefault(root => root.name == LevelFeaturesName);
             if (existing != null)
@@ -641,42 +653,49 @@ namespace BallFinisher.Editor
             }
             Physics.SyncTransforms();
 
-            BallInstaller ballInstaller = FindInScene<BallInstaller>().First();
-            Transform ballStart = (Transform) new SerializedObject(ballInstaller)
-                .FindProperty("_ballStartPoint").objectReferenceValue;
-
-            float ballHeight = ballStart.position.y;
+            Vector3 ballStart     = GetBallStart();
+            float ballHeight      = ballStart.y;
             List<Vector3> coins   = FindInScene<CoinsStartPointMarker>().Select(coin => coin.transform.position).ToList();
             List<Vector3> enemies = FindInScene<EnemyStartPoint>().Select(enemy => enemy.transform.position).ToList();
             Vector3 finish        = FindInScene<FinishTrigger>().First().transform.position;
 
-            PlayArea playArea = new (ballStart.position, coins.Concat(enemies).Append(finish));
-            float area = playArea.Area;
-            Debug.Log($"[Feature Setup] {scene.name}: reachable area {area:0} m2");
+            PlayArea playArea = new (ballStart, coins.Concat(enemies).Append(finish));
+            Debug.Log($"[Feature Setup] {scene.name}: reachable area {playArea.Area:0} m2");
 
             LevelPlacer placer = new (scene.name, playArea, coins, enemies, ballHeight)
             {
                 Parent = new GameObject(LevelFeaturesName).transform
             };
-            placer.Taken.Add((ballStart.position, 2.0f));
+            placer.Taken.Add((ballStart, 2.0f));
             placer.Taken.Add((finish, 2.0f));
 
             // The pickiest and biggest first, while there is still room for them.
-            placer.Place(prefabs.MovingWall, Count(area, 750.0f, 2, 5), MovingWallReach, 2.5f, 1.0f, 2.5f, true,
+            placer.Place(prefabs.MovingWall, layout.MovingWalls, MovingWallReach, 2.5f, 1.0f, 2.5f, true,
                 spot => placer.GetMovingWallRotation(spot));
-            placer.Place(prefabs.Spinner, Count(area, 650.0f, 2, 6), SpinnerRadius, 3.4f, 3.0f, 4.2f, true,
+            placer.Place(prefabs.Spinner, layout.Spinners, SpinnerRadius, 3.4f, 3.0f, 4.2f, true,
                 _ => Quaternion.identity);
-            placer.Place(prefabs.Bumper, Count(area, 280.0f, 4, 14), 0.9f, 2.2f, 2.0f, 3.0f, true,
+            // Chasers start well away from the ball, so the player has a moment before meeting them.
+            placer.Place(prefabs.Chaser, layout.Chasers, 1.0f, 1.5f, 1.0f, 3.0f, true,
+                spot => IsFarFrom(spot, ballStart, 15.0f) ? Quaternion.identity : null);
+            placer.Place(prefabs.Bumper, layout.Bumpers, 0.9f, 2.2f, 2.0f, 3.0f, true,
                 _ => Quaternion.identity);
-            placer.Place(prefabs.BoostPad, Count(area, 300.0f, 3, 12), 2.4f, 2.0f, 2.5f, 3.0f, true,
+            placer.Place(prefabs.BoostPad, layout.BoostPads, 2.4f, 2.0f, 2.5f, 3.0f, true,
                 spot => Quaternion.LookRotation(playArea.GetLongestRunDirection(spot)));
-            placer.Place(prefabs.HealPickup, Count(area, 450.0f, 2, 8), 0.6f, 0.75f, 1.5f, 3.0f, false,
+            placer.Place(prefabs.TimeCoin, layout.TimeCoins, 0.6f, 0.75f, 1.5f, 3.0f, false,
+                _ => Quaternion.identity);
+            placer.Place(prefabs.TimeTrap, layout.TimeTraps, 0.6f, 0.75f, 1.5f, 3.0f, false,
+                _ => Quaternion.identity);
+            placer.Place(prefabs.HealPickup, layout.HealPickups, 0.6f, 0.75f, 1.5f, 3.0f, false,
                 _ => Quaternion.identity);
         }
 
-        private static int Count(float area, float areaPerItem, int min, int max)
+        private static Vector3 GetBallStart()
         {
-            return Mathf.Clamp(Mathf.RoundToInt(area / areaPerItem), min, max);
+            BallInstaller ballInstaller = FindInScene<BallInstaller>().First();
+            Transform ballStart = (Transform) new SerializedObject(ballInstaller)
+                .FindProperty("_ballStartPoint").objectReferenceValue;
+
+            return ballStart.position;
         }
 
         private static IEnumerable<(Vector3 Point, float Distance)> Avoid(IEnumerable<Vector3> points, float distance)
@@ -960,7 +979,7 @@ namespace BallFinisher.Editor
 
         private class LevelPrefabs
         {
-            public GameObject BoostPad, HealPickup, Bumper, Spinner, MovingWall;
+            public GameObject BoostPad, HealPickup, Bumper, Spinner, MovingWall, TimeCoin, TimeTrap, Chaser;
         }
 
         // Places one kind of object after another, remembering the room each one takes.
@@ -1011,7 +1030,7 @@ namespace BallFinisher.Editor
                     .ToList();
                 int placed = 0;
 
-                for (int attempt = 0; placed < count && attempt < count * 20; attempt++)
+                for (int attempt = 0; placed < count && attempt < count * 40; attempt++)
                 {
                     if (!_playArea.TryFindSpot(Taken, radius + Passage, minClearance, avoid, out Vector3 spot)) break;
 

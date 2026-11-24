@@ -1,0 +1,31 @@
+{
+    "Level 1":
+    {
+        "Title"          : "Level 1 - Easy",
+        "Intro"          : "Coins are worth x1.",
+        "TimeLimit"      : 300.0,
+        "TimeCoinBonus"  : 20.0,
+        "TimeTrapPenalty": 10.0,
+        "CoinMultiplier" : 1
+    },
+
+    "Level 2":
+    {
+        "Title"          : "Level 2 - Medium",
+        "Intro"          : "New: cacti, spinning bars, sliding walls and red clocks. Coins are worth x2.",
+        "TimeLimit"      : 330.0,
+        "TimeCoinBonus"  : 15.0,
+        "TimeTrapPenalty": 15.0,
+        "CoinMultiplier" : 2
+    },
+
+    "Level 3":
+    {
+        "Title"          : "Level 3 - Hard",
+        "Intro"          : "New: chasers. Coins are worth x3.",
+        "TimeLimit"      : 480.0,
+        "TimeCoinBonus"  : 15.0,
+        "TimeTrapPenalty": 20.0,
+        "CoinMultiplier" : 3
+    }
+}

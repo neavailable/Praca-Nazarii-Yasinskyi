@@ -1,0 +1,10 @@
+{
+    "Chaser":
+    {
+        "Speed"          : 2.0,
+        "DetectionRadius": 9.0,
+        "KnockPower"     : 9.0,
+        "DamageCooldown" : 1.0,
+        "Damage"         : 15
+    }
+}

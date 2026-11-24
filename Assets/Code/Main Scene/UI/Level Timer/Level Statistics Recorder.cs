@@ -9,7 +9,7 @@ using MainScene.ClassesParameters;
 
 namespace MainScene.UI.Timer
 {
-    // Adds the time spent in the level and keeps the most coins collected in one run.
+    // Adds the time spent in the level and keeps the most coins collected in one run, time bonus included.
     // Time is saved when the level is left (retry, menu) and when the app goes to the background.
     public class LevelStatisticsRecorder : MonoBehaviour
     {
@@ -36,6 +36,7 @@ namespace MainScene.UI.Timer
             {
                 _coinsCollected.Add(coinTrigger.Subscribe(AddCoins));
             }
+            _coinsCollected.Add(levelTimerLogic.Result.Subscribe(AddTimeBonus));
         }
 
         private void OnApplicationPause(bool paused)
@@ -54,6 +55,11 @@ namespace MainScene.UI.Timer
         {
             _coins += coins;
             _levelStatistics.UpdateMaxCoins(_coins);
+        }
+
+        private void AddTimeBonus(LevelResult result)
+        {
+            if (result != null) AddCoins(result.TimeBonus);
         }
 
         private void SaveTimePlayed()

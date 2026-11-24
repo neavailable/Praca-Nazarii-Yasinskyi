@@ -18,9 +18,7 @@ na dwóch komputerach: stacjonarnym z~procesorem AMD Ryzen~5 9600X, 32~GB pamię
 operacyjnej i~kartą graficzną AMD Radeon RX~9070~XT (podrozdział~3.4.1) oraz na laptopie
 HP, z~użyciem myszy jako urządzenia wejściowego. Uruchomienie gry na dwóch maszynach
 o~wyraźnie różnej wydajności pozwoliło sprawdzić, że rozgrywka nie zależy od liczby klatek
-obrazu, ponieważ ruch kuli i~przeszkód jest obliczany w~stałym kroku fizyki. Akcja
-wejściowa ma wspólną definicję dla myszy i~ekranu dotykowego, więc różnice pomiędzy
-platformami ograniczają się do odczytu pozycji wskaźnika (podrozdział~\ref{sec:sterowanie}).
+obrazu, ponieważ ruch kuli i~przeszkód jest obliczany w~stałym kroku fizyki.
 W~trakcie sesji testowych oceniano przede wszystkim wygodę sterowania, czytelność interfejsu
 i~poziom trudności, a~ich wyniki opisano w~podrozdziale~\ref{sec:poprawki}.
 
@@ -94,14 +92,12 @@ tworzenia kuli do etapu inicjalizacji kontenera, np. do klasy implementującej i
 
 \section{Walidacja konfiguracji i procesu budowania}
 
-Pliki konfiguracyjne są sprawdzane automatycznie przed każdym budowaniem wersji
-instalacyjnej (listing~\ref{lst:walidacja}). Walidacja obejmuje wszystkie 25 klas
+Pliki konfiguracyjne są sprawdzane automatycznie przed każdym budowaniem aplikacji
+(listing~\ref{lst:walidacja}). Walidacja obejmuje wszystkie 25 klas
 konfiguracji, a~błąd w~dowolnym pliku przerywa budowanie z~komunikatem wskazującym klasę
 i~przyczynę. W~ten sposób wykrywane są brakujące pliki, sekcje i~wartości, a~także
 niezgodność nazw pól JSON z~parametrami konstruktorów klas danych. Proces budowania
 dodatkowo weryfikuje, czy wszystkie sceny wskazane w~ustawieniach istnieją w~projekcie.
-Budowanie wersji instalacyjnej tym procesem zakończyło się powodzeniem, a~wynikowy plik APK
-ma rozmiar 174,8~MB.
 
 \section{Testy rozgrywki i wprowadzone poprawki}
 \label{sec:poprawki}
@@ -119,17 +115,17 @@ w~tabeli~\ref{tab:poprawki}. Zmiany te wprowadzano w~kolejnych wersjach projektu
     \toprule
     \textbf{Zaobserwowany problem} & \textbf{Wprowadzona zmiana} \\
     \midrule
-    Sterowanie przechyłem urządzenia (trzy tryby do wyboru w~ustawieniach) okazało się
+    Sterowanie przechyłem (trzy tryby do wyboru w~ustawieniach) okazało się
     nieprecyzyjne & usunięto sterowanie przechyłem i~okno ustawień, pozostawiając wyłącznie
     gest przeciągnięcia \\
-    Kula zatrzymana za ścianą bywała niewidoczna i~nie dało się jej dotknąć & dodano
+    Kula zatrzymana za ścianą bywała niewidoczna i~nie dało się jej kliknąć & dodano
     przycisk \emph{Push}, aktywny tylko przy nieruchomej kuli \\
     Wiatr działający wyłącznie na toczącą się kulę był odbierany jako nieprzewidywalny & wiatr
     stał się stałym, łagodnym dryfem działającym również na stojącą kulę; w~interfejsie
     pozostawiono tylko strzałkę kierunku \\
     Kula dociśnięta wiatrem do ściany obracała się w~miejscu & obrót siatki liczony
     z~rzeczywistego przemieszczenia, a~nie z~zadanej prędkości \\
-    Kula stojąca wewnątrz pola przyspieszającego lub apteczki nie reagowała na dotyk &
+    Kula stojąca wewnątrz pola przyspieszającego lub apteczki nie reagowała na kliknięcie &
     rzutowanie promienia z~pominięciem wyzwalaczy \\
     Ruchome przeszkody mogły zakleszczyć kulę lub ciągnąć ją za sobą & komponent
     \klasa{ObstacleKnocker} odpychający kulę od punktu styku \\
@@ -161,7 +157,6 @@ bez tworzenia pośrednich napisów. Subskrypcje są zwalniane razem z~obiektami,
 utworzyły; pośrednio potwierdza to scenariusz automatyczny, w~którym kolejne wczytania scen
 nie powodowały wyjątków wynikających z~odwołań do zniszczonych obiektów.
 
-Grę projektowano z~myślą o~płynnym działaniu na telefonach średniej klasy, jednak
-w~ramach pracy nie wykonano systematycznych pomiarów liczby klatek na sekundę na różnych
-urządzeniach. Pomiary takie, wykonane narzędziem Unity Profiler na kilku telefonach,
-stanowią naturalny element dalszych prac.
+W~ramach pracy nie wykonano systematycznych pomiarów liczby klatek na sekundę. Pomiary
+takie, wykonane narzędziem Unity Profiler na komputerach o~różnej wydajności, stanowią
+naturalny element dalszych prac.

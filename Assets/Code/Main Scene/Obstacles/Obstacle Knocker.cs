@@ -2,6 +2,7 @@ using UnityEngine;
 using Zenject;
 using Configuration.Data;
 using MainScene.Ball;
+using MainScene.Feedback;
 
 
 namespace MainScene.Obstacles
@@ -11,10 +12,15 @@ namespace MainScene.Obstacles
     public class ObstacleKnocker : MonoBehaviour
     {
         private float _knockPower;
+        private FeedbackPlayer _feedbackPlayer;
 
 
         [Inject]
-        private void Constructor(ObstaclesData obstaclesData) => _knockPower = obstaclesData.KnockPower;
+        private void Constructor(ObstaclesData obstaclesData, FeedbackPlayer feedbackPlayer)
+        {
+            _knockPower     = obstaclesData.KnockPower;
+            _feedbackPlayer = feedbackPlayer;
+        }
 
         private void OnCollisionEnter(Collision collision)
         {
@@ -28,6 +34,7 @@ namespace MainScene.Obstacles
             }
 
             ballMovement.BallMovementLogic.Knock(direction.normalized, _knockPower);
+            _feedbackPlayer.Play(FeedbackType.Knock, collision.GetContact(0).point);
         }
     }
 }

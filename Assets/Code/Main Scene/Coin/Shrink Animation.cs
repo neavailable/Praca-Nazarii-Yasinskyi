@@ -18,7 +18,8 @@ namespace MainScene.Coin
             _minScale       = minScale;
         }
 
-        public async UniTask Play()
+        // Returns false when the object was destroyed first, e.g. the level was left mid-animation.
+        public async UniTask<bool> Play()
         {
             while (ContinueShrinking())
             {
@@ -30,7 +31,9 @@ namespace MainScene.Coin
                 );
 
                 await UniTask.WaitForFixedUpdate();
+                if (_transform == null) return false;
             }
+            return true;
         }
 
 

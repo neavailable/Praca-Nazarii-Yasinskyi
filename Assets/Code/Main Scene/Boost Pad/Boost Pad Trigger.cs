@@ -2,6 +2,7 @@ using UnityEngine;
 using Zenject;
 using Configuration.Data;
 using MainScene.Ball;
+using MainScene.Feedback;
 
 
 namespace MainScene.BoostPad
@@ -11,10 +12,15 @@ namespace MainScene.BoostPad
     public class BoostPadTrigger : MonoBehaviour
     {
         private BoostPadData _boostPadData;
+        private FeedbackPlayer _feedbackPlayer;
 
 
         [Inject]
-        private void Constructor(BoostPadData boostPadData) => _boostPadData = boostPadData;
+        private void Constructor(BoostPadData boostPadData, FeedbackPlayer feedbackPlayer)
+        {
+            _boostPadData   = boostPadData;
+            _feedbackPlayer = feedbackPlayer;
+        }
 
         private void OnTriggerEnter(Collider collider)
         {
@@ -28,6 +34,7 @@ namespace MainScene.BoostPad
                 _boostPadData.BoostPower,
                 _boostPadData.MaxSpeed
             );
+            _feedbackPlayer.Play(FeedbackType.Boost, ballMovement.transform.position);
         }
     }
 }

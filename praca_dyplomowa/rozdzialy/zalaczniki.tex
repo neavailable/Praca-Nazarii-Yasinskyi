@@ -101,20 +101,16 @@ Tabela zawiera wszystkie wartości zapisane w~plikach JSON w~katalogu
 \end{minipage}
 \endgroup
 
-\section*{Załącznik C. Instrukcja uruchomienia i budowania aplikacji}
-\addcontentsline{toc}{section}{Załącznik C. Instrukcja uruchomienia i budowania aplikacji}
+\section*{Załącznik C. Instrukcja uruchomienia aplikacji}
+\addcontentsline{toc}{section}{Załącznik C. Instrukcja uruchomienia aplikacji}
 
-Wymagany jest edytor Unity 2022.3.60f1, a~do budowania wersji Android także moduły
-Android Build Support, Android SDK \& NDK Tools oraz OpenJDK, instalowane w~programie
-Unity Hub. Pierwsze otwarcie projektu i~pierwsze budowanie wymagają połączenia
-z~internetem (pakiet UniTask oraz zależności Androida wtyczek Firebase i~Appodeal).
+Wymagany jest edytor Unity 2022.3.60f1 zainstalowany w~programie Unity Hub. Pierwsze
+otwarcie projektu wymaga połączenia z~internetem, ponieważ pakiet UniTask jest pobierany
+z~repozytorium Git.
 \begin{enumerate}[leftmargin=1.9cm, itemsep=0pt]
   \item Otworzyć katalog projektu w~programie Unity Hub i~poczekać na import zasobów.
   \item Aby zagrać w~edytorze, otworzyć scenę \sciezka{Assets/Scenes/Bootstrap.unity}
         i~nacisnąć przycisk odtwarzania; strzał wykonuje się, przeciągając myszą od kuli.
-  \item Aby zbudować plik APK, wybrać polecenie \emph{Build $\rightarrow$ Android APK}
-        (plik APK trafia do katalogu \sciezka{Builds/Android}) lub uruchomić skrypt
-        \sciezka{./Build-Android.ps1}, który buduje grę w~osobnej kopii projektu.
   \item Parametry rozgrywki zmienia się w~plikach JSON w~katalogu
         \sciezka{Assets/Resources/Configurations}; są one sprawdzane przed każdym budowaniem.
 \end{enumerate}

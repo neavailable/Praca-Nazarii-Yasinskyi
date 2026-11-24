@@ -9,7 +9,7 @@ Ten rozdział opisuje, w~jaki sposób zostały one zrealizowane w~kodzie. Omówi
 strukturę projektu, wczytywanie konfiguracji, kompozycję zależności, sterowanie i~model
 ruchu kuli, przeszkody, przeciwników i~punkty życia, monety i~warunek ukończenia poziomu,
 pulę efektów cząsteczkowych, interfejs użytkownika w~podejściu MVVM, animacje
-asynchroniczne, minimapę, pomiar czasu oraz budowanie wersji na system Android. Fragmenty
+asynchroniczne, minimapę, pomiar czasu oraz walidację konfiguracji przed budowaniem. Fragmenty
 kodu pochodzą bezpośrednio z~repozytorium projektu; pominięto w~nich dyrektywy
 \kod{using}, deklaracje przestrzeni nazw oraz części niezwiązane z~omawianym zagadnieniem.
 
@@ -17,8 +17,8 @@ kodu pochodzą bezpośrednio z~repozytorium projektu; pominięto w~nich dyrektyw
 
 Kod gry znajduje się w~katalogu \sciezka{Assets/Code} i~liczy 256~plików C\# o~łącznej
 objętości około 7~tys. wierszy. Zasoby Unity (sceny, prefabrykaty, materiały, animacje)
-oraz pliki konfiguracyjne są przechowywane w~osobnych katalogach, a~kod narzędzi edytora,
-w~tym skrypt budowania wersji Android, w~katalogu \sciezka{Assets/Editor}. Biblioteki
+oraz pliki konfiguracyjne są przechowywane w~osobnych katalogach, a~kod narzędzi edytora
+w~katalogu \sciezka{Assets/Editor}. Biblioteki
 zewnętrzne znajdują się w~katalogach \kod{Plugins}, \kod{Appodeal}, \kod{Firebase}
 i~\kod{Packages}. Najważniejsze elementy struktury przedstawiono na
 rysunku~\ref{rys:struktura}.
@@ -35,7 +35,7 @@ rysunku~\ref{rys:struktura}.
     .3 Main Menu/\DTcomment{piłka w~tle menu, okno statystyk}.
     .3 Loading/, Bootstrap/, All Scenes/\DTcomment{przepływ scen i~statystyki}.
     .3 Firebase Settings/, Ad Settings/\DTcomment{usługi zewnętrzne}.
-    .2 Editor/\DTcomment{budowanie APK, konfiguracja poziomów}.
+    .2 Editor/\DTcomment{walidacja przed budowaniem, konfiguracja poziomów}.
     .2 Input/\DTcomment{akcje Input System i~odczyt pozycji wskaźnika}.
     .2 Resources/.
     .3 Configurations/\DTcomment{18 plików JSON z~parametrami rozgrywki}.
@@ -229,10 +229,9 @@ Prefabrykaty przekazywane fabrykom są opakowane w~klasy takie jak \klasa{CoinPr
 Akcja wejściowa \kod{Move} pliku \kod{Player Input.inputactions} jest typu przycisk
 i~ma dwa powiązania: lewy przycisk myszy oraz naciśnięcie pierwszego dotyku na ekranie.
 Wciśnięcie wywołuje zdarzenie \kod{performed}, a~zwolnienie \kod{canceled}. Pozycję
-wskaźnika odczytuje statyczna klasa \klasa{PlayerPointer}. W~wersji na Androida,
-wybieranej dyrektywą kompilacji warunkowej \kod{\#if UNITY\_ANDROID \&\& !UNITY\_EDITOR},
-odczytuje ona pozycję pierwszego dotyku z~urządzenia \klasa{Touchscreen}, a~w~edytorze
-pozycję uogólnionego wskaźnika \klasa{Pointer}, obsługującego mysz.
+wskaźnika odczytuje statyczna klasa \klasa{PlayerPointer} z~uogólnionego wskaźnika
+\klasa{Pointer}, obsługującego mysz. Wariant odczytujący pozycję pierwszego dotyku
+z~urządzenia \klasa{Touchscreen} jest wybierany dyrektywą kompilacji warunkowej.
 
 Po wciśnięciu klasa \klasa{BallInputLogic} rzutuje promień z~kamery przez punkt ekranu
 i~sprawdza, czy pierwszy trafiony zderzacz należy do kuli. Wywołanie \kod{Physics.Raycast}
@@ -240,13 +239,13 @@ otrzymuje parametr \kod{QueryTriggerInteraction.Ignore}, więc pole przyspieszaj
 apteczka, w~których stoi kula, nie przesłaniają jej. Tylko gest rozpoczęty na kuli
 generuje zdarzenia wciśnięcia i~zwolnienia przekazywane dalej. Zdarzenie wciśnięcia
 aktywuje linię celowniczą (komponent \klasa{LineRenderer} rysowany w~każdym kroku fizyki
-od kuli do punktu podłoża pod palcem) oraz zapamiętuje punkt początkowy gestu
+od kuli do punktu podłoża pod kursorem) oraz zapamiętuje punkt początkowy gestu
 (rysunek~\ref{rys:celowanie}).
 
 \begin{figure}[!htb]
   \centering
   \zrzut[0.66\textwidth]{poziom1_celowanie}
-  \caption{Celowanie: linia od kuli do punktu podłoża pod palcem; po zwolnieniu kula
+  \caption{Celowanie: linia od kuli do punktu podłoża pod kursorem; po zwolnieniu kula
     porusza się w~kierunku przeciwnym; \zrodloWlasne}
   \label{rys:celowanie}
 \end{figure}
@@ -753,7 +752,7 @@ z~najlepszym zapisanym czasem, zapisuje statystyki i~publikuje wynik we~właści
 reaktywnej. Utrata zdrowia jedynie zatrzymuje pomiar. Czas jest formatowany jako
 \kod{mm:ss.cc} na podstawie liczby pełnych setnych sekundy, co eliminuje błędne wartości
 typu \kod{00:60.00} powstające przy zaokrąglaniu i~uniezależnia zapis od ustawień
-regionalnych telefonu.
+regionalnych systemu.
 
 \begin{lstlisting}[caption={Zakończenie pomiaru czasu w~klasie LevelTimerLogic; \zrodloWlasne},label=lst:czas]
 public void Finish()
@@ -773,12 +772,11 @@ public void Finish()
 \end{lstlisting}
 
 Wyniki są przechowywane w~mechanizmie \klasa{PlayerPrefs} \cite{unity-playerprefs}, który
-na Androidzie zapisuje dane w~pliku preferencji aplikacji, a~w~edytorze w~rejestrze
-systemu Windows. Klasa \klasa{LevelStatistics} buduje klucze z~nazwy poziomu
+w~systemie Windows zapisuje dane w~rejestrze. Klasa \klasa{LevelStatistics} buduje klucze z~nazwy poziomu
 (tabela~\ref{tab:klucze}), dzięki czemu dodanie nowego poziomu nie wymaga zmian w~kodzie.
 Łączny czas gry zapisuje komponent \klasa{LevelStatisticsRecorder} przy opuszczeniu
-poziomu oraz przy przejściu aplikacji w~tło, ponieważ system Android może zakończyć
-proces aplikacji działającej w~tle bez wywołania metod zamykających.
+poziomu oraz przy wstrzymaniu aplikacji, dzięki czemu wynik nie zostaje utracony, nawet
+jeśli proces zostanie zakończony bez wywołania metod zamykających.
 
 \begin{table}[!htb]
   \centering
@@ -818,7 +816,7 @@ otwarciu. Okno końca poziomu jest wspólne dla wygranej i~przegranej; panel z~c
 przejścia jest w~nim widoczny tylko wtedy, gdy wynik poziomu został opublikowany, czyli
 po dotarciu do mety (rysunek~\ref{rys:wyniki}a).
 
-\section{Przepływ scen, usługi zewnętrzne i budowanie wersji Android}
+\section{Przepływ scen, usługi zewnętrzne i walidacja konfiguracji}
 
 Przejścia pomiędzy scenami realizuje komponent \klasa{SceneLoader}. W~edytorze scena
 docelowa jest wybierana w~inspektorze jako zasób typu \klasa{SceneAsset}, a~metoda
@@ -855,15 +853,12 @@ reklam z~nagrodą i~implementuje interfejs zdarzeń reklamy \cite{appodeal}. Kla
 została jeszcze podłączona do żadnej sceny, a~sposób nagradzania gracza pozostaje
 elementem dalszego rozwoju.
 
-Budowanie wersji na Androida zautomatyzowano w~skrypcie edytora \klasa{AndroidBuild}.
-Metoda \kod{BuildApk} przełącza platformę docelową, ustawia zaplecze IL2CPP i~architektury
-ARMv7 oraz ARM64, po czym buduje plik APK ze wszystkich włączonych scen. Klasa implementuje
-też interfejs \klasa{IPreprocessBuildWithReport}, więc przed każdym budowaniem sprawdza,
-czy sceny istnieją, przygotowuje lokalne repozytorium Maven z~bibliotekami Firebase
-i~waliduje wszystkie pliki konfiguracyjne (listing~\ref{lst:walidacja}). Walidacja
-wyszukuje przez refleksję wszystkie klasy dziedziczące po
-\klasa{AbstractConfiguration<T>} i~wywołuje ich metodę \kod{Load}, więc brak pliku,
-sekcji lub wartości przerywa budowanie, zamiast ujawnić się dopiero na telefonie.
+Skrypt edytora implementujący interfejs \klasa{IPreprocessBuildWithReport} jest wywoływany
+przed każdym budowaniem aplikacji. Sprawdza on, czy wszystkie sceny istnieją, i~waliduje
+pliki konfiguracyjne (listing~\ref{lst:walidacja}). Walidacja wyszukuje przez refleksję
+wszystkie klasy dziedziczące po \klasa{AbstractConfiguration<T>} i~wywołuje ich metodę
+\kod{Load}, więc brak pliku, sekcji lub wartości przerywa budowanie, zamiast ujawnić się
+dopiero w~trakcie gry.
 
 \begin{lstlisting}[caption={Walidacja plików konfiguracyjnych przed budowaniem; \zrodloWlasne},label=lst:walidacja]
 private static void ValidateConfigurations()
@@ -885,12 +880,3 @@ private static void ValidateConfigurations()
     }
 }
 \end{lstlisting}
-
-Skrypt PowerShell \sciezka{Build-Android.ps1} kopiuje katalogi \kod{Assets},
-\kod{Packages} i~\kod{ProjectSettings} do osobnego katalogu roboczego i~uruchamia
-w~nim edytor w~trybie wsadowym z~metodą \kod{BuildApk}. Dzięki temu budowanie nie blokuje
-projektu otwartego w~edytorze. Zbudowany plik APK ma rozmiar 174,8~MB. Po rozpakowaniu
-największą część zajmują biblioteki natywne dla architektur ARM64 (97,7~MB, w~tym
-71,7~MB kodu gry i~bibliotek przetłumaczonego przez IL2CPP) i~ARMv7 (79,8~MB) oraz
-11~plików DEX o~łącznym rozmiarze 91,1~MB z~kodem bibliotek Androida dołączanych przez
-wtyczki Appodeal i~Firebase. Zasoby gry zajmują 20,7~MB.

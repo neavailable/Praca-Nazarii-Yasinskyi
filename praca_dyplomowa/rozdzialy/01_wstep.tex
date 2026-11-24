@@ -67,8 +67,7 @@ kończy rozgrywkę. Cel główny podzielono na następujące cele szczegółowe:
         efektów cząsteczkowych (wzorzec \emph{Object Pool}),
   \item zapis wyników rozgrywki oraz integracja z~usługami zewnętrznymi (Firebase,
         Appodeal) na poziomie inicjalizacji,
-  \item przygotowanie wersji instalacyjnej na urządzenia z~systemem Android i~przetestowanie
-        działania gry.
+  \item przetestowanie działania gry i~wprowadzenie poprawek na podstawie sesji testowych.
 \end{itemize}
 
 Założono, że gra ma być kompletna z~punktu widzenia gracza (menu, wybór poziomu, ekran
@@ -80,8 +79,8 @@ opisowej zostanie położony na rozwiązania architektoniczne i~sposób ich real
 Zakres pracy obejmował zarówno część koncepcyjną, jak i~wykonanie działającej aplikacji.
 Prace rozpoczęto od określenia mechaniki sterowania. Zrezygnowano ze sterowania klawiaturą
 na rzecz gestu przeciągnięcia od kuli: długość przeciągnięcia wyznacza siłę, a~jego
-kierunek, odwrócony o~180°, kierunek ruchu. Takie sterowanie działa w~ten sam sposób
-z~myszą i~na ekranie dotykowym, co ułatwiło późniejsze przeniesienie gry na system Android.
+kierunek, odwrócony o~180°, kierunek ruchu. Takie sterowanie jest naturalne przy obsłudze
+myszą i~nie wymaga zapamiętywania klawiszy.
 
 Następnie przygotowano szkielet architektury: kontekst projektu i~konteksty scen biblioteki
 Zenject, instalatory dla poszczególnych obszarów gry, mechanizm wczytywania konfiguracji
@@ -98,9 +97,8 @@ Na tej podstawie zaimplementowano kolejne mechaniki:
 \end{itemize}
 
 Przygotowano trzy poziomy o~rosnącej trudności, scenę menu głównego, scenę ładowania oraz
-scenę rozruchową inicjalizującą usługi zewnętrzne. Ostatnim etapem było przygotowanie
-procesu budowania wersji na system Android, testy działania oraz opracowanie niniejszej
-dokumentacji. Rysunek~\ref{rys:hud-wstep} przedstawia widok rozgrywki na pierwszym poziomie.
+scenę rozruchową inicjalizującą usługi zewnętrzne. Ostatnim etapem były testy
+działania, poprawki wynikające z~sesji testowych oraz opracowanie niniejszej dokumentacji. Rysunek~\ref{rys:hud-wstep} przedstawia widok rozgrywki na pierwszym poziomie.
 
 \begin{figure}[!htb]
   \centering
@@ -120,8 +118,8 @@ i~straci przewidywalną część prędkości. Z~tego powodu ruch kuli jest wyzna
 własny model (kierunek i~moc pchnięcia), a~silnik fizyki odpowiada głównie za wykrywanie
 kolizji i~rozwiązywanie przenikania obiektów.
 
-Drugim problemem było sterowanie na ekranie dotykowym. Gest musi rozpoczynać się na kuli,
-a~nie w~dowolnym miejscu ekranu, ponieważ w~przeciwnym razie przypadkowe dotknięcie
+Drugim problemem było sterowanie gestem przeciągnięcia. Gest musi rozpoczynać się na kuli,
+a~nie w~dowolnym miejscu ekranu, ponieważ w~przeciwnym razie przypadkowe kliknięcie
 wystrzeliwałoby kulę. Wymagało to rzutowania promienia z~kamery na scenę i~pominięcia
 obiektów typu \emph{trigger} (pól przyspieszających, apteczek, mety), które mogłyby
 przesłonić kulę stojącą wewnątrz nich. Dodatkowo kula zatrzymana za ścianą bywa
@@ -137,16 +135,14 @@ obiektach po przeładowaniu sceny. Konieczne było więc konsekwentne zarządzan
 Czwarty problem wynikał z~samego silnika: obiekty \klasa{MonoBehaviour} są tworzone przez
 Unity, więc nie można przekazać im zależności przez konstruktor, a~obiekty tworzone
 w~trakcie gry muszą powstawać przez kontener zależności, co wpłynęło na projekt fabryk.
-Ostatnim zagadnieniem była zgodność z~kompilacją IL2CPP stosowaną na Androidzie, która
+Ostatnim zagadnieniem była zgodność z~kompilacją IL2CPP \cite{unity-il2cpp}, która
 usuwa nieużywany kod i~może zablokować deserializację plików konfiguracyjnych wykonywaną
 przez refleksję.
 
 Oceniając realizację projektu, należy wskazać różnice pomiędzy wnioskiem o~temat a~wykonaną
-aplikacją. Wniosek przewidywał grę desktopową i~bibliotekę UniRx. W~trakcie prac platformą
-docelową stał się Android, ponieważ sterowanie gestem okazało się naturalne dla ekranu
-dotykowego, a~zamiast UniRx zastosowano bibliotekę R3 tego samego autora, rozwijaną jako
-jej następca \cite{r3,unirx}. Wersja uruchomiona w~edytorze Unity nadal jest w~pełni grywalna
-przy użyciu myszy. Integracja z~Firebase została ograniczona do inicjalizacji i~weryfikacji
+aplikacją. Wniosek przewidywał bibliotekę UniRx, a~w~trakcie prac zastosowano zamiast niej
+bibliotekę R3 tego samego autora, rozwijaną jako jej następca \cite{r3,unirx}. Integracja
+z~Firebase została ograniczona do inicjalizacji i~weryfikacji
 zależności, a~zapis danych obejmuje wyniki poziomów przechowywane lokalnie. Szczegółowe
 omówienie tych decyzji zawiera rozdział~\ref{rozdz:zakonczenie}.
 
@@ -168,9 +164,9 @@ grawitacji. Celem jest dotarcie do mety, zanim upłynie czas przeznaczony na pla
 upływ czasu lub spadek z~planszy kosztuje życie, a~zbierane po drodze banany zwiększają
 wynik.
 
-Sterowanie przechyłem planszy wymaga precyzyjnego kontrolera analogowego; jego
-odpowiednik na telefonie, oparty na czujnikach ruchu, był sprawdzany również w~niniejszym
-projekcie, ale został odrzucony po testach (podrozdział~\ref{sec:poprawki}).
+Sterowanie przechyłem planszy wymaga precyzyjnego kontrolera analogowego.
+Sterowanie przechyłem było sprawdzane również w~niniejszym projekcie, ale zostało
+odrzucone po testach (podrozdział~\ref{sec:poprawki}).
 
 \subsection{Marble It Up!}
 
@@ -186,8 +182,8 @@ w~opisywanej grze w~postaci licznika czasu i~zapisu najlepszego czasu każdego p
 
 \subsection{Golf Battle}
 
-\emph{Golf Battle} to mobilna gra w~mini-golfa wydana przez firmę Miniclip w~2018 roku na
-systemy Android i~iOS \cite{gra-golf}. Strzał wykonuje się przez odciągnięcie palca od
+\emph{Golf Battle} to gra w~mini-golfa wydana przez firmę Miniclip w~2018 roku na
+urządzenia mobilne \cite{gra-golf}. Strzał wykonuje się przez odciągnięcie palca od
 piłki i~jego zwolnienie: długość przeciągnięcia określa siłę uderzenia, a~kierunek
 przeciwny do ruchu palca wyznacza tor piłki \cite{gra-golf-recenzja}. Rozgrywka toczy się
 w~trybie wieloosobowym, w~którym na tym samym torze może jednocześnie grać do sześciu
@@ -248,4 +244,4 @@ przedstawia sposób testowania gry, wyniki testów funkcjonalnych i~zmiany wprow
 podstawie. Rozdział szósty podsumowuje pracę, ocenia stopień realizacji celów i~wskazuje
 kierunki dalszego rozwoju. Pracę uzupełniają bibliografia, spisy rysunków, tabel i~listingów
 oraz załączniki zawierające informacje o~kodzie źródłowym, pliki konfiguracyjne
-i~instrukcję budowania aplikacji.
+i~instrukcję uruchomienia aplikacji.

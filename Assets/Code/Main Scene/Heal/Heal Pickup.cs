@@ -40,7 +40,7 @@ namespace MainScene.Heal
 
         private async UniTaskVoid Disappear()
         {
-            await _shrinkAnimation.Play();
+            if (!await _shrinkAnimation.Play()) return;
             gameObject.SetActive(false);
         }
     }

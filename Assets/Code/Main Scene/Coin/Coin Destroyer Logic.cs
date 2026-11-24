@@ -37,7 +37,7 @@ namespace MainScene.Coin
 
         private async UniTaskVoid Shrinking()
         {
-            await _shrinkAnimation.Play();
+            if (!await _shrinkAnimation.Play()) return;
             CoinDestroyed.OnNext(_transform.gameObject);
 
             _transform.gameObject.SetActive(false);
